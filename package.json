@@ -13,6 +13,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "start": "node dist/server.js",
+    "start:stdio": "node dist/index.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

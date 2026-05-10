@@ -1,0 +1,49 @@
+name: MCP Server — Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: laddro-labs
+
+      - name: Configure Docker to use Artifact Registry
+        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
+
+      - name: Build and push production image
+        run: |
+          docker build --platform linux/amd64 \
+            -t us-docker.pkg.dev/laddro-labs/gcr.io/laddro-career-mcp:production \
+            -t us-docker.pkg.dev/laddro-labs/gcr.io/laddro-career-mcp:${{ github.sha }} \
+            .
+          docker push us-docker.pkg.dev/laddro-labs/gcr.io/laddro-career-mcp:production
+          docker push us-docker.pkg.dev/laddro-labs/gcr.io/laddro-career-mcp:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy laddro-career-mcp-production \
+            --image=us-docker.pkg.dev/laddro-labs/gcr.io/laddro-career-mcp:production \
+            --region=europe-west4 \
+            --platform=managed \
+            --project=laddro-labs \
+            --service-account=terraform-deployer@laddro-labs.iam.gserviceaccount.com \
+            --update-secrets="/secrets/.env=LADDRO_MCP_PRODUCTION_ENV:latest" \
+            --port=8080 \
+            --quiet
