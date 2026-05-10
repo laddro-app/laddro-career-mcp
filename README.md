@@ -60,6 +60,13 @@ Set the environment variable `LADDRO_API_KEY` before running.
 | `LADDRO_API_KEY` | Yes | Your Laddro API key |
 | `LADDRO_BASE_URL` | No | Override API URL (default: `https://api.laddro.com`) |
 
+## Links
+
+- [Laddro](https://laddro.com) — AI-powered career tools
+- [API Reference](https://api.laddro.com/reference) — Interactive docs
+- [Documentation](https://docs.laddro.com) — Guides and tutorials
+- [GitHub](https://github.com/laddro-app) — All SDKs and tools
+
 ## License
 
 MIT
