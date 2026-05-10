@@ -1,0 +1,19 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      apiKey:
+        type: string
+        title: "Laddro API Key"
+        description: "Your Laddro Career API key from console.laddro.com"
+    required:
+      - apiKey
+  commandFunction: |
+    (config) => ({
+      command: "npx",
+      args: ["-y", "@laddro/career-mcp"],
+      env: {
+        LADDRO_API_KEY: config.apiKey
+      }
+    })
