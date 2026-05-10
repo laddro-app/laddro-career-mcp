@@ -1,0 +1,43 @@
+{
+  "name": "@laddro/career-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Laddro Career API — resume tailoring, cover letters, and PDF export for AI agents",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "laddro-career-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "laddro",
+    "career",
+    "resume",
+    "ai-agent"
+  ],
+  "author": "Laddro <support@laddro.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laddro-app/laddro-career-mcp"
+  },
+  "homepage": "https://developers.laddro.com",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@laddro/career-sdk": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
