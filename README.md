@@ -1,5 +1,7 @@
 # @laddro/career-mcp
 
+[![smithery badge](https://smithery.ai/badge/laddro/career)](https://smithery.ai/servers/laddro/career)
+
 MCP server for the [Laddro Career API](https://api.laddro.com/reference). Gives AI agents access to resume tailoring, cover letter generation, PDF export, and template browsing.
 
 ## Setup
