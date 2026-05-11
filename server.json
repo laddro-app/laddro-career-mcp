@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.laddro/career",
+  "title": "Laddro Career",
+  "description": "MCP server for resume tailoring, cover letter generation, PDF export, and job search — powered by the Laddro Career API.",
+  "version": "0.1.1",
+  "websiteUrl": "https://docs.laddro.com/docs/mcp",
+  "repository": {
+    "url": "https://github.com/laddro-app/laddro-career-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@laddro/career-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "LADDRO_API_KEY",
+          "description": "Your Laddro Career API key from console.laddro.com",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.laddro.com/mcp"
+    }
+  ]
+}
