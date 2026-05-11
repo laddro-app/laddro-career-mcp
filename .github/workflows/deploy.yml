@@ -14,6 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout career-sdk
+        uses: actions/checkout@v4
+        with:
+          repository: laddro-app/laddro-career-sdk-ts
+          path: career-sdk-repo
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Prepare SDK build context
+        run: |
+          mkdir -p career-sdk
+          cp career-sdk-repo/package.json career-sdk/
+          cp -r career-sdk-repo/dist career-sdk/dist
+          rm -rf career-sdk-repo
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
