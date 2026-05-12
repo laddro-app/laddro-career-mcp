@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { Laddro } from "@laddro/career-sdk";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ListPromptsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 import { createHandlers } from "./handlers.js";
 import { tools } from "./tools.js";
@@ -62,11 +62,13 @@ const httpServer = createServer(async (req, res) => {
       });
 
       const server = new Server(
-        { name: "laddro-career", version: "0.1.0" },
-        { capabilities: { tools: {} } },
+        { name: "laddro-career", version: "0.2.0" },
+        { capabilities: { tools: {}, resources: {}, prompts: {} } },
       );
 
       server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+      server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
+      server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
 
       server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args = {} } = request.params;

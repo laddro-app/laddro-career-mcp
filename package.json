@@ -1,6 +1,6 @@
 {
   "name": "@laddro/career-mcp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "mcpName": "com.laddro/career",
   "description": "MCP server for the Laddro Career API",
   "type": "module",
