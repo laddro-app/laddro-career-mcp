@@ -2,12 +2,8 @@ FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Copy SDK (local dependency)
-COPY career-sdk/ ./career-sdk/
-
-# Install MCP server dependencies
-COPY package.json ./
-RUN npm install --install-links
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -17,7 +13,6 @@ FROM node:22-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/career-sdk ./career-sdk
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package.json ./
