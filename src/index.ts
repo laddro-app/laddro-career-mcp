@@ -19,7 +19,7 @@ const client = new Laddro({
 const handler = createHandlers(client);
 
 const server = new Server(
-  { name: "laddro-career", version: "0.2.0" },
+  { name: "laddro-career", version: "0.3.0" },
   { capabilities: { tools: {}, resources: {}, prompts: {} } },
 );
 

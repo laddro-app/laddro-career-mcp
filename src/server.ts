@@ -62,7 +62,7 @@ const httpServer = createServer(async (req, res) => {
       });
 
       const server = new Server(
-        { name: "laddro-career", version: "0.2.0" },
+        { name: "laddro-career", version: "0.3.0" },
         { capabilities: { tools: {}, resources: {}, prompts: {} } },
       );
 
