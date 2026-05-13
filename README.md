@@ -32,34 +32,54 @@ claude mcp add laddro-career -- npx @laddro/career-mcp
 
 Set the environment variable `LADDRO_API_KEY` before running.
 
+### Remote HTTP
+
+Use the hosted Streamable HTTP endpoint:
+
+```text
+https://mcp.laddro.com/mcp
+```
+
+Send your Laddro API key on the MCP initialize request:
+
+```http
+Authorization: Bearer laddro_live_...
+```
+
+or:
+
+```http
+x-api-key: laddro_live_...
+```
+
 ## Available tools
 
 | Tool | Description |
 |---|---|
-| `list_templates` | Browse all 22 resume templates |
-| `get_template` | Get template colors and fonts |
-| `list_fonts` | All available font families |
-| `list_languages` | All 14 supported locales |
-| `list_models` | AI providers for BYOK |
-| `list_resumes` | User's resumes |
-| `get_resume` | Resume metadata |
-| `render_resume` | Re-render with new template settings |
-| `tailor_resume` | AI-tailor resume for a job |
-| `export_resume` | Export as PDF |
-| `list_cover_letters` | User's cover letters |
-| `get_cover_letter` | Cover letter metadata |
-| `create_cover_letter` | Create manually |
-| `generate_cover_letter` | AI-generate from resume + job |
-| `render_cover_letter` | Render with template settings |
-| `get_settings` | Current AI provider config |
-| `update_ai_model` | Set BYOK provider |
-| `delete_ai_model` | Remove BYOK config |
+| `laddro.templates.list` | Browse all 22 resume templates |
+| `laddro.templates.get` | Get template colors and fonts |
+| `laddro.fonts.list` | All available font families |
+| `laddro.languages.list` | All 14 supported locales |
+| `laddro.models.list` | AI providers for BYOK |
+| `laddro.resumes.list` | User's resumes |
+| `laddro.resumes.get` | Resume metadata |
+| `laddro.resumes.render` | Re-render with new template settings |
+| `laddro.resumes.tailor` | AI-tailor resume for a job |
+| `laddro.resumes.export` | Export as PDF |
+| `laddro.coverLetters.list` | User's cover letters |
+| `laddro.coverLetters.get` | Cover letter metadata |
+| `laddro.coverLetters.create` | Create manually |
+| `laddro.coverLetters.generate` | AI-generate from resume + job |
+| `laddro.coverLetters.render` | Render with template settings |
+| `laddro.settings.get` | Current AI provider config |
+| `laddro.settings.updateModel` | Set BYOK provider |
+| `laddro.settings.deleteModel` | Remove BYOK config |
 
 ## Environment variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `LADDRO_API_KEY` | Yes | Your Laddro API key |
+| `LADDRO_API_KEY` | Yes for stdio; optional fallback for HTTP | Your Laddro API key |
 | `LADDRO_BASE_URL` | No | Override API URL (default: `https://api.laddro.com`) |
 
 ## Links

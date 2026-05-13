@@ -3,7 +3,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 export function createHandlers(client: Laddro) {
   return async (name: string, args: Record<string, unknown>): Promise<CallToolResult> => {
-    switch (name) {
+    const toolName = normalizeToolName(name);
+
+    switch (toolName) {
       case "laddro_list_templates": {
         const templates = await client.templates.list();
         return json(templates);
@@ -149,6 +151,31 @@ export function createHandlers(client: Laddro) {
         return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     }
   };
+}
+
+const toolNameAliases: Record<string, string> = {
+  "laddro.templates.list": "laddro_list_templates",
+  "laddro.templates.get": "laddro_get_template",
+  "laddro.fonts.list": "laddro_list_fonts",
+  "laddro.languages.list": "laddro_list_languages",
+  "laddro.models.list": "laddro_list_models",
+  "laddro.resumes.list": "laddro_list_resumes",
+  "laddro.resumes.get": "laddro_get_resume",
+  "laddro.resumes.render": "laddro_render_resume",
+  "laddro.resumes.tailor": "laddro_tailor_resume",
+  "laddro.resumes.export": "laddro_export_resume",
+  "laddro.coverLetters.list": "laddro_list_cover_letters",
+  "laddro.coverLetters.get": "laddro_get_cover_letter",
+  "laddro.coverLetters.create": "laddro_create_cover_letter",
+  "laddro.coverLetters.generate": "laddro_generate_cover_letter",
+  "laddro.coverLetters.render": "laddro_render_cover_letter",
+  "laddro.settings.get": "laddro_get_settings",
+  "laddro.settings.updateModel": "laddro_update_ai_model",
+  "laddro.settings.deleteModel": "laddro_delete_ai_model",
+};
+
+function normalizeToolName(name: string) {
+  return toolNameAliases[name] ?? name;
 }
 
 function json(data: unknown): CallToolResult {
