@@ -7,6 +7,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSche
 
 import { createHandlers } from "./handlers.js";
 import { tools } from "./tools.js";
+import { version } from "./version.js";
 
 const apiKey = process.env.LADDRO_API_KEY || "";
 const baseUrl = process.env.LADDRO_BASE_URL;
@@ -19,7 +20,7 @@ const client = new Laddro({
 const handler = createHandlers(client);
 
 const server = new Server(
-  { name: "laddro-career", version: "0.3.0" },
+  { name: "laddro-career", version },
   { capabilities: { tools: {}, resources: {}, prompts: {} } },
 );
 
