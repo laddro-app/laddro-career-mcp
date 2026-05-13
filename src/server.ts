@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage } from "node:http";
+import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 
 import { Laddro } from "@laddro/career-sdk";
@@ -7,7 +7,9 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema, ListResourcesRequestSchema, ListPromptsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 import { createHandlers } from "./handlers.js";
+import { getLaddroApiKey, normalizePath } from "./http.js";
 import { tools } from "./tools.js";
+import { version } from "./version.js";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const baseUrl = process.env.LADDRO_BASE_URL;
@@ -29,7 +31,7 @@ const httpServer = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({
       name: "laddro-career",
-      version: "0.3.0",
+      version,
       transport: "streamable-http",
       endpoint: "/mcp",
     }));
@@ -68,10 +70,10 @@ const httpServer = createServer(async (req, res) => {
       });
 
       const server = new Server(
-        { name: "laddro-career", version: "0.3.0" },
+        { name: "laddro-career", version },
         { capabilities: { tools: {}, resources: {}, prompts: {} } },
       );
-      const apiKey = getLaddroApiKey(req);
+      const apiKey = getLaddroApiKey(req.headers, process.env.LADDRO_API_KEY || "");
       const handler = apiKey
         ? createHandlers(createClient(apiKey))
         : createMissingKeyHandler();
@@ -135,30 +137,4 @@ function createMissingKeyHandler() {
     }],
     isError: true,
   });
-}
-
-function getLaddroApiKey(req: IncomingMessage) {
-  const headerKey = getHeaderValue(req.headers["x-api-key"]);
-  if (headerKey) {
-    return headerKey;
-  }
-
-  const authorization = getHeaderValue(req.headers.authorization);
-  const bearerMatch = authorization?.match(/^Bearer\s+(.+)$/i);
-  if (bearerMatch?.[1]) {
-    return bearerMatch[1].trim();
-  }
-
-  return process.env.LADDRO_API_KEY || "";
-}
-
-function getHeaderValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function normalizePath(pathname: string) {
-  if (pathname === "/") {
-    return pathname;
-  }
-  return pathname.replace(/\/+$/, "");
 }
