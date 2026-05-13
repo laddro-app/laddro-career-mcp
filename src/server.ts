@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import { randomUUID } from "node:crypto";
 
 import { Laddro } from "@laddro/career-sdk";
@@ -10,28 +10,34 @@ import { createHandlers } from "./handlers.js";
 import { tools } from "./tools.js";
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
-const apiKey = process.env.LADDRO_API_KEY || "";
 const baseUrl = process.env.LADDRO_BASE_URL;
-
-const client = new Laddro({
-  apiKey,
-  ...(baseUrl ? { baseUrl } : {}),
-});
-
-const handler = createHandlers(client);
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 const httpServer = createServer(async (req, res) => {
+  const url = new URL(req.url || "/", "http://localhost");
+  const pathname = normalizePath(url.pathname);
+
   // Health check for Cloud Run
-  if (req.method === "GET" && req.url === "/health") {
+  if (req.method === "GET" && pathname === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok" }));
     return;
   }
 
+  if (req.method === "GET" && pathname === "/") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      name: "laddro-career",
+      version: "0.3.0",
+      transport: "streamable-http",
+      endpoint: "/mcp",
+    }));
+    return;
+  }
+
   // MCP endpoint
-  if (req.url === "/mcp") {
+  if (pathname === "/mcp") {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
     if (req.method === "GET" || req.method === "DELETE") {
@@ -65,6 +71,10 @@ const httpServer = createServer(async (req, res) => {
         { name: "laddro-career", version: "0.3.0" },
         { capabilities: { tools: {}, resources: {}, prompts: {} } },
       );
+      const apiKey = getLaddroApiKey(req);
+      const handler = apiKey
+        ? createHandlers(createClient(apiKey))
+        : createMissingKeyHandler();
 
       server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
       server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
@@ -109,3 +119,46 @@ const httpServer = createServer(async (req, res) => {
 httpServer.listen(PORT, () => {
   console.log(`MCP server listening on port ${PORT}`);
 });
+
+function createClient(apiKey: string) {
+  return new Laddro({
+    apiKey,
+    ...(baseUrl ? { baseUrl } : {}),
+  });
+}
+
+function createMissingKeyHandler() {
+  return async () => ({
+    content: [{
+      type: "text" as const,
+      text: "Missing Laddro API key. For HTTP MCP, send Authorization: Bearer <laddro key> or x-api-key on the initialize request. For stdio, set LADDRO_API_KEY.",
+    }],
+    isError: true,
+  });
+}
+
+function getLaddroApiKey(req: IncomingMessage) {
+  const headerKey = getHeaderValue(req.headers["x-api-key"]);
+  if (headerKey) {
+    return headerKey;
+  }
+
+  const authorization = getHeaderValue(req.headers.authorization);
+  const bearerMatch = authorization?.match(/^Bearer\s+(.+)$/i);
+  if (bearerMatch?.[1]) {
+    return bearerMatch[1].trim();
+  }
+
+  return process.env.LADDRO_API_KEY || "";
+}
+
+function getHeaderValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizePath(pathname: string) {
+  if (pathname === "/") {
+    return pathname;
+  }
+  return pathname.replace(/\/+$/, "");
+}
