@@ -88,6 +88,16 @@ test("runtime version matches package version", async () => {
   assert.equal(version, packageJson.version);
 });
 
+test("registry metadata version matches package version", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const serverJson = JSON.parse(await readFile(new URL("../server.json", import.meta.url), "utf8"));
+
+  assert.equal(serverJson.version, packageJson.version);
+
+  const packageEntry = serverJson.packages.find((candidate) => candidate.identifier === packageJson.name);
+  assert.equal(packageEntry?.version, packageJson.version);
+});
+
 test("README documents every published tool", async () => {
   const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
 
