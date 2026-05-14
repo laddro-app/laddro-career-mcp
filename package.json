@@ -17,7 +17,7 @@
     "dev": "tsc --watch",
     "release": "npm test && changeset publish",
     "test": "npm run build && node --test test/*.test.mjs",
-    "version": "changeset version && npm install --package-lock-only",
+    "version": "changeset version && node scripts/sync-version-metadata.mjs && npm install --package-lock-only",
     "start": "node dist/server.js",
     "start:stdio": "node dist/index.js",
     "prepublishOnly": "npm run build"
