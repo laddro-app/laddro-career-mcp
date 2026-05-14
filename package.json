@@ -13,8 +13,11 @@
   ],
   "scripts": {
     "build": "tsc",
+    "changeset": "changeset",
     "dev": "tsc --watch",
+    "release": "npm test && changeset publish",
     "test": "npm run build && node --test test/*.test.mjs",
+    "version": "changeset version && npm install --package-lock-only",
     "start": "node dist/server.js",
     "start:stdio": "node dist/index.js",
     "prepublishOnly": "npm run build"
@@ -41,6 +44,7 @@
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0"
   }
