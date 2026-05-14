@@ -40,7 +40,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@laddro/career-sdk": "^0.1.0",
+    "@laddro/career-sdk": "^0.2.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
