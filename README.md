@@ -82,6 +82,31 @@ x-api-key: laddro_live_...
 | `LADDRO_API_KEY` | Yes for stdio; optional fallback for HTTP | Your Laddro API key |
 | `LADDRO_BASE_URL` | No | Override API URL (default: `https://api.laddro.com`) |
 
+## Development
+
+```bash
+npm ci
+npm test
+```
+
+`npm test` builds the TypeScript package and runs MCP contract tests for auth handling, tool metadata, and handler routing.
+
+## Releases
+
+This package uses Changesets and SemVer.
+
+- Patch: bug fixes, docs, tests, internal hardening.
+- Minor: new backwards-compatible MCP tools or capabilities.
+- Major: breaking tool names, schemas, auth, or transport behavior.
+
+Every PR that changes the published package should include a changeset:
+
+```bash
+npm run changeset
+```
+
+After the PR merges to `main`, GitHub Actions opens a release PR with the version bump and changelog. Merging that release PR publishes the package to npm and creates the GitHub release. The Cloud Run deploy workflow also runs on `main`, so hosted MCP updates automatically after release merges.
+
 ## Links
 
 - [laddro.com](https://laddro.com)
