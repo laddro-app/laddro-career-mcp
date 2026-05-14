@@ -4,6 +4,15 @@ import test from "node:test";
 import { createHandlers } from "../dist/handlers.js";
 
 const binaryFixture = new Uint8Array([37, 80, 68, 70]).buffer;
+const binaryResponseFixture = {
+  data: binaryFixture,
+  metadata: {
+    resumeId: "resume-1",
+    coverLetterId: "cover-1",
+    filename: "tailored.zip",
+    mimeType: "application/zip",
+  },
+};
 
 const handlerCases = [
   {
@@ -57,14 +66,16 @@ const handlerCases = [
   {
     name: "laddro.resumes.tailor",
     args: { resumeId: "resume-1", positionName: "Senior Developer", jobDescription: "Build systems", jobUrl: "https://example.com/job", mode: "standard", language: "en", includeCoverLetter: false, templateId: "GRAPHITE", colorId: "blue", font: "Inter" },
-    client: { tailor: { run: async () => binaryFixture } },
+    client: { tailor: { runDetailed: async () => binaryResponseFixture } },
     expectedMimeType: "application/pdf",
+    expectedMetadata: { status: "tailored", resumeId: "resume-1", coverLetterId: "cover-1" },
   },
   {
     name: "laddro.resumes.tailor",
     args: { positionName: "Senior Developer", includeCoverLetter: true },
-    client: { tailor: { run: async () => binaryFixture } },
+    client: { tailor: { runDetailed: async () => binaryResponseFixture } },
     expectedMimeType: "application/zip",
+    expectedMetadata: { status: "tailored", resumeId: "resume-1", coverLetterId: "cover-1" },
   },
   {
     name: "laddro.resumes.export",
@@ -93,8 +104,9 @@ const handlerCases = [
   {
     name: "laddro.coverLetters.generate",
     args: { resumeId: "resume-1", positionName: "Senior Developer", jobDescription: "Build systems", jobUrl: "https://example.com/job", language: "en", templateId: "GRAPHITE", colorId: "blue", font: "Inter" },
-    client: { coverLetters: { generate: async () => binaryFixture } },
+    client: { coverLetters: { generateDetailed: async () => binaryResponseFixture } },
     expectedMimeType: "application/pdf",
+    expectedMetadata: { status: "generated", resumeId: "resume-1", coverLetterId: "cover-1" },
   },
   {
     name: "laddro.coverLetters.render",
@@ -134,10 +146,23 @@ for (const testCase of handlerCases) {
       return;
     }
 
-    assert.equal(result.content[0].type, "resource");
-    assert.equal(result.content[0].resource.mimeType, testCase.expectedMimeType);
-    assert.ok(result.content[0].resource.blob.length > 0);
+    const resourceIndex = testCase.expectedMetadata ? 1 : 0;
+    if (testCase.expectedMetadata) {
+      assert.equal(result.content[0].type, "text");
+      assert.deepEqual(
+        pick(JSON.parse(result.content[0].text), Object.keys(testCase.expectedMetadata)),
+        testCase.expectedMetadata,
+      );
+    }
+
+    assert.equal(result.content[resourceIndex].type, "resource");
+    assert.equal(result.content[resourceIndex].resource.mimeType, testCase.expectedMimeType);
+    assert.ok(result.content[resourceIndex].resource.blob.length > 0);
   });
+}
+
+function pick(value, keys) {
+  return Object.fromEntries(keys.map((key) => [key, value[key]]));
 }
 
 test("handler keeps legacy underscore aliases working", async () => {

@@ -51,7 +51,7 @@ export function createHandlers(client: Laddro) {
         return binary(pdf, "application/pdf");
       }
       case "laddro_tailor_resume": {
-        const pdf = await client.tailor.run({
+        const result = await client.tailor.runDetailed({
           resumeId: args.resumeId as string | undefined,
           positionName: args.positionName as string,
           jobDescription: args.jobDescription as string | undefined,
@@ -64,7 +64,7 @@ export function createHandlers(client: Laddro) {
           font: args.font as string | undefined,
         });
         const mimeType = args.includeCoverLetter ? "application/zip" : "application/pdf";
-        return binary(pdf, mimeType);
+        return binary(result.data, mimeType, artifactSummary("tailored", result.metadata));
       }
       case "laddro_export_resume": {
         const pdf = await client.export.pdf({
@@ -106,7 +106,7 @@ export function createHandlers(client: Laddro) {
         return json(result);
       }
       case "laddro_generate_cover_letter": {
-        const pdf = await client.coverLetters.generate({
+        const result = await client.coverLetters.generateDetailed({
           resumeId: args.resumeId as string | undefined,
           positionName: args.positionName as string,
           jobDescription: args.jobDescription as string | undefined,
@@ -116,7 +116,7 @@ export function createHandlers(client: Laddro) {
           colorId: args.colorId as string | undefined,
           font: args.font as string | undefined,
         });
-        return binary(pdf, "application/pdf");
+        return binary(result.data, "application/pdf", artifactSummary("generated", result.metadata));
       }
       case "laddro_render_cover_letter": {
         const pdf = await client.coverLetters.render(args.coverLetterId as string, {
@@ -182,16 +182,32 @@ function json(data: unknown): CallToolResult {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
-function binary(data: ArrayBuffer, mimeType: string): CallToolResult {
+function binary(data: ArrayBuffer, mimeType: string, metadata?: Record<string, unknown>): CallToolResult {
   const base64 = Buffer.from(data).toString("base64");
+  const content: CallToolResult["content"] = [];
+  if (metadata) {
+    content.push({ type: "text", text: JSON.stringify(metadata, null, 2) });
+  }
+  content.push({
+    type: "resource",
+    resource: {
+      uri: `data:${mimeType};base64,${base64}`,
+      mimeType,
+      blob: base64,
+    },
+  });
   return {
-    content: [{
-      type: "resource",
-      resource: {
-        uri: `data:${mimeType};base64,${base64}`,
-        mimeType,
-        blob: base64,
-      },
-    }],
+    content,
+  };
+}
+
+function artifactSummary(status: string, metadata: { resumeId?: string; coverLetterId?: string; filename?: string; mimeType?: string }) {
+  return {
+    status,
+    resumeId: metadata.resumeId,
+    coverLetterId: metadata.coverLetterId,
+    filename: metadata.filename,
+    mimeType: metadata.mimeType,
+    note: "The file is attached as the following MCP resource.",
   };
 }
