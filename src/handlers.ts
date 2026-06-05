@@ -179,7 +179,10 @@ function normalizeToolName(name: string) {
 }
 
 function json(data: unknown): CallToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    structuredContent: toStructured(data),
+  };
 }
 
 function binary(data: ArrayBuffer, mimeType: string, metadata?: Record<string, unknown>): CallToolResult {
@@ -198,7 +201,17 @@ function binary(data: ArrayBuffer, mimeType: string, metadata?: Record<string, u
   });
   return {
     content,
+    structuredContent: { content: base64, mimeType, ...(metadata ?? {}) },
   };
+}
+
+// The MCP spec requires `structuredContent` to be an object when an outputSchema
+// is declared. Arrays and primitives get wrapped so SDK validation passes.
+function toStructured(data: unknown): Record<string, unknown> {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return data as Record<string, unknown>;
+  }
+  return { value: data };
 }
 
 function artifactSummary(status: string, metadata: { resumeId?: string; coverLetterId?: string; filename?: string; mimeType?: string }) {
