@@ -180,6 +180,43 @@ test("handler keeps legacy underscore aliases working", async () => {
   });
 });
 
+test("json handler sets structuredContent matching the output schema", async () => {
+  const handler = createHandlers({
+    templates: { list: async () => ({ templates: [{ id: "GRAPHITE", name: "Graphite" }] }) },
+  });
+  const result = await handler("laddro.templates.list", {});
+
+  assert.equal(result.isError, undefined);
+  assert.ok(result.structuredContent, "structuredContent must be present for tools with an outputSchema");
+  assert.deepEqual(result.structuredContent, { templates: [{ id: "GRAPHITE", name: "Graphite" }] });
+});
+
+test("binary handler sets structuredContent with content + mimeType", async () => {
+  const handler = createHandlers({
+    resumes: { render: async () => binaryFixture },
+  });
+  const result = await handler("laddro.resumes.render", { resumeId: "resume-1", templateId: "GRAPHITE" });
+
+  assert.equal(result.isError, undefined);
+  assert.ok(result.structuredContent, "binary handler must populate structuredContent");
+  assert.equal(result.structuredContent.mimeType, "application/pdf");
+  assert.equal(typeof result.structuredContent.content, "string");
+  assert.ok(result.structuredContent.content.length > 0, "base64 content must be non-empty");
+});
+
+test("binary handler with metadata merges metadata into structuredContent", async () => {
+  const handler = createHandlers({
+    tailor: { runDetailed: async () => binaryResponseFixture },
+  });
+  const result = await handler("laddro.resumes.tailor", { positionName: "X", includeCoverLetter: true });
+
+  assert.equal(result.isError, undefined);
+  assert.ok(result.structuredContent);
+  assert.equal(result.structuredContent.resumeId, "resume-1");
+  assert.equal(result.structuredContent.coverLetterId, "cover-1");
+  assert.equal(result.structuredContent.mimeType, "application/zip");
+});
+
 test("handler returns MCP errors for unknown tools", async () => {
   const handler = createHandlers({});
   const result = await handler("laddro.unknown.tool", {});
