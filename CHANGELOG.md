@@ -1,5 +1,11 @@
 # @laddro/career-mcp
 
+## 0.4.0
+
+### Minor Changes
+
+- 7f09fd8: Return artifact metadata before generated PDF and ZIP resources.
+
 ## 0.3.3
 
 ### Patch Changes
