@@ -75,12 +75,36 @@ x-api-key: laddro_live_...
 | `laddro.settings.updateModel` | Set BYOK provider |
 | `laddro.settings.deleteModel` | Remove BYOK config |
 
+## Connector (OAuth) mode
+
+Behind the `MCP_CONNECTOR_ENABLED` flag (default off). When enabled and a request
+carries `Authorization: Bearer lad_at_*` (a Laddro OAuth access token), the server
+runs an OAuth connector session that forwards the token to **laddro-backend**
+(`service.laddro.com`) instead of career-api. It also serves
+`GET /.well-known/oauth-protected-resource` (RFC 9728) and answers unauthenticated
+`/mcp` calls with `401 + WWW-Authenticate: Bearer resource_metadata=...` so OAuth
+clients can discover the authorization server. With the flag off, behaviour is
+unchanged (no discovery route, no 401 enforcement, all 18 tools via career-api).
+
+Connector tools (OAuth sessions only): "You write the content. Laddro stores it
+and renders the PDF."
+
+| Tool | Scope | Description |
+|---|---|---|
+| `laddro.resume.schema` | — | JSON Schema for resume content |
+| `laddro.resume.create` | `resumes:write` | Create a resume, returns `{ resumeId }` |
+| `laddro.resume.update` | `resumes:write` | Full-replace a resume, returns `{ resumeId, updatedAt }` |
+| `laddro.coverLetter.schema` | — | JSON Schema for cover-letter content |
+
 ## Environment variables
 
 | Variable | Required | Description |
 |---|---|---|
 | `LADDRO_API_KEY` | Yes for stdio; optional fallback for HTTP | Your Laddro API key |
 | `LADDRO_BASE_URL` | No | Override API URL (default: `https://api.laddro.com`) |
+| `MCP_CONNECTOR_ENABLED` | No | `true` enables OAuth connector mode (default off) |
+| `LADDRO_BACKEND_URL` | No | Backend base URL for connector tools (default: `https://service.laddro.com`) |
+| `MCP_PUBLIC_URL` | No | This server's public URL for OAuth metadata (else derived from forwarded headers) |
 
 ## Development
 
