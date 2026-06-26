@@ -4,10 +4,20 @@ import type { IncomingHttpHeaders } from "node:http";
 // MCP connector OAuth tools forward the Bearer token to this issuer.
 export const AUTHORIZATION_SERVER = "https://service.laddro.com";
 
-// Backend base URL the connector tools call. Defaults to the production
-// authorization server; overridable for local/staging via env.
+// Backend base URL for OAuth (the Authorization Server: discovery + token).
+// Overridable for local/staging via env.
 export function getBackendBaseUrl() {
   return process.env.LADDRO_BACKEND_URL || AUTHORIZATION_SERVER;
+}
+
+// Resource base URL the connector tools call for the actual resume/cover-letter
+// operations. career-api (api.laddro.com) is Laddro's single external API: it
+// accepts the user's `Bearer lad_at_*` OAuth token (validated against the shared
+// oauth_tokens table) exactly as it accepts a developer x-api-key. The backend
+// only issues the token; it never sees the resource call. Overridable via env
+// (e.g. http://localhost:8082 locally).
+export function getResourceBaseUrl() {
+  return process.env.LADDRO_CAREER_API_URL || "https://api.laddro.com";
 }
 
 // Opaque OAuth access tokens minted by the backend AS are prefixed `lad_at_`.

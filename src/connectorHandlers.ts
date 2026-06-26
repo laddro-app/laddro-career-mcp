@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { BackendClient, BackendError } from "./backendClient.js";
+import { CareerApiClient, CareerApiError } from "./careerApiClient.js";
 import { resolveCoverLetterSchema, resolveResumeSchema } from "./schemas.js";
 
 const CONNECTOR_TOOL_NAMES = new Set([
@@ -19,7 +19,7 @@ export function isConnectorTool(name: string) {
 // feature-gate entitlements; we surface its errors (incl. insufficient_scope and
 // 403 upgrade-required) as MCP tool errors.
 export function createConnectorHandlers(bearerToken: string) {
-  const backend = new BackendClient(bearerToken);
+  const backend = new CareerApiClient(bearerToken);
 
   return async (name: string, args: Record<string, unknown>): Promise<CallToolResult> => {
     try {
@@ -59,7 +59,7 @@ function buildResumeBody(args: Record<string, unknown>): Record<string, unknown>
 }
 
 function toToolError(error: unknown): CallToolResult {
-  if (error instanceof BackendError) {
+  if (error instanceof CareerApiError) {
     // Map insufficient_scope / forbidden / unauthorized to a readable MCP error.
     const code = errorCode(error);
     const text = code ? `${code}: ${error.message}` : error.message;
@@ -69,7 +69,7 @@ function toToolError(error: unknown): CallToolResult {
   return { content: [{ type: "text", text: message }], isError: true };
 }
 
-function errorCode(error: BackendError): string | undefined {
+function errorCode(error: CareerApiError): string | undefined {
   if (error.body && typeof error.body === "object") {
     const body = error.body as Record<string, unknown>;
     if (typeof body.error === "string") {

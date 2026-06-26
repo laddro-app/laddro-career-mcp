@@ -1,20 +1,22 @@
-import { getBackendBaseUrl } from "./oauth.js";
+import { getResourceBaseUrl } from "./oauth.js";
 
-// Thin HTTP client for laddro-backend (service.laddro.com). Used only by the
-// OAuth connector tools: it forwards the user's `Bearer lad_at_*` access token
-// untouched — the backend authenticates the token, resolves scopes, and applies
-// the feature-gate entitlements. This client never sees career-api.
+// HTTP client for career-api (api.laddro.com) — Laddro's single external API.
+// Used by the OAuth connector tools: it forwards the user's `Bearer lad_at_*`
+// access token untouched. career-api authenticates the token (against the shared
+// oauth_tokens table), resolves scopes, and applies the unified feature-gate
+// entitlements — the same path a developer x-api-key takes. The backend issues
+// the token but never sees this resource call.
 //
-// ASSUMED BACKEND ENDPOINTS (reconcile with the backend agent / spec §4):
+// career-api endpoints:
 //   GET  /v1/resumes/schema           -> JSON Schema for resume content
 //   POST /v1/resumes                  -> create/upsert resume, returns { resumeId }
 //   PUT  /v1/resumes/:id              -> upsert existing resume, returns { resumeId, updatedAt }
 //   GET  /v1/cover-letters/schema     -> JSON Schema for cover-letter content
-export class BackendClient {
+export class CareerApiClient {
   private readonly baseUrl: string;
   private readonly bearerToken: string;
 
-  constructor(bearerToken: string, baseUrl = getBackendBaseUrl()) {
+  constructor(bearerToken: string, baseUrl = getResourceBaseUrl()) {
     this.bearerToken = bearerToken;
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
@@ -54,24 +56,24 @@ export class BackendClient {
     const payload = parseJson(text);
 
     if (!response.ok) {
-      // Surface the backend's machine-readable error (e.g. insufficient_scope,
+      // Surface career-api's machine-readable error (e.g. insufficient_scope,
       // 403 upgrade-required) so the handler can map it to an MCP error.
-      throw new BackendError(response.status, payload, text);
+      throw new CareerApiError(response.status, payload, text);
     }
 
     return payload;
   }
 }
 
-export class BackendError extends Error {
+export class CareerApiError extends Error {
   readonly status: number;
   readonly body: unknown;
 
   constructor(status: number, body: unknown, raw: string) {
     const detail =
-      (isRecord(body) && (body.message || body.error || body.error_description)) || raw || "Backend request failed";
+      (isRecord(body) && (body.message || body.error || body.error_description)) || raw || "career-api request failed";
     super(typeof detail === "string" ? detail : JSON.stringify(detail));
-    this.name = "BackendError";
+    this.name = "CareerApiError";
     this.status = status;
     this.body = body;
   }

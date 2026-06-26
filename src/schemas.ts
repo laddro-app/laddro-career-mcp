@@ -1,4 +1,4 @@
-import type { BackendClient } from "./backendClient.js";
+import type { CareerApiClient } from "./careerApiClient.js";
 
 // Resolves the resume / cover-letter JSON Schemas for the connector schema tools.
 //
@@ -11,7 +11,7 @@ import type { BackendClient } from "./backendClient.js";
 // TODO(connector): once `@laddro-app/schemas` is a dependency, drop the dynamic
 // import guard and import the JSON statically.
 
-export async function resolveResumeSchema(backend: BackendClient): Promise<unknown> {
+export async function resolveResumeSchema(backend: CareerApiClient): Promise<unknown> {
   const fromPackage = await tryImportSchema("@laddro-app/schemas/json/resume");
   if (fromPackage !== undefined) {
     return fromPackage;
@@ -23,7 +23,7 @@ export async function resolveResumeSchema(backend: BackendClient): Promise<unkno
   return placeholderResumeSchema;
 }
 
-export async function resolveCoverLetterSchema(backend: BackendClient): Promise<unknown> {
+export async function resolveCoverLetterSchema(backend: CareerApiClient): Promise<unknown> {
   const fromPackage = await tryImportSchema("@laddro-app/schemas/json/cover-letter");
   if (fromPackage !== undefined) {
     return fromPackage;
