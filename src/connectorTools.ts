@@ -3,6 +3,20 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { resumeSchema } from "./generated/resumeSchema.js";
 import { SCOPES } from "./oauth.js";
 
+// MCP inputSchema must be a concrete top-level object schema. The bundled
+// resumeSchema is a $ref to #/$defs/Resume, so expose the Resume fields at the
+// top level and carry the component $defs alongside for $ref resolution.
+const resumeDef = resumeSchema.$defs.Resume as unknown as {
+  properties?: Record<string, unknown>;
+  required?: readonly string[];
+};
+const resumeInputSchema = {
+  type: "object",
+  properties: resumeDef.properties,
+  required: resumeDef.required,
+  $defs: resumeSchema.$defs,
+} as unknown as Tool["inputSchema"];
+
 // Connector tools are advertised ONLY in OAuth-bearer sessions (Bearer lad_at_*)
 // and ONLY when MCP_CONNECTOR_ENABLED=true. They forward to laddro-backend, which
 // stores the content and renders the PDF. Each tool carries the scope it needs so
@@ -74,7 +88,7 @@ export const connectorTools: ConnectorTool[] = [
     name: "laddro.resume.create",
     description:
       "Create a resume. Provide the full resume object conforming to laddro.resume.schema (title, locale, personal, summary, optional sections, etc.). You write the content; Laddro stores it and renders the PDF.",
-    inputSchema: resumeSchema as unknown as Tool["inputSchema"],
+    inputSchema: resumeInputSchema,
     outputSchema: {
       type: "object",
       properties: { resumeId: { type: "string" } },
@@ -86,7 +100,7 @@ export const connectorTools: ConnectorTool[] = [
     name: "laddro.resume.update",
     description:
       "Update a resume: include the resume's `id` plus the full updated object.",
-    inputSchema: resumeSchema as unknown as Tool["inputSchema"],
+    inputSchema: resumeInputSchema,
     outputSchema: permissiveResultSchema,
     annotations: { title: "Update Resume", ...WRITE_HINTS },
     requiredScope: SCOPES.resumesWrite,
