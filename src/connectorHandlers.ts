@@ -59,12 +59,12 @@ export function createConnectorHandlers(bearerToken: string) {
           return json(result);
         }
         case "laddro.resume.update": {
-          // career-api upserts on the `id` carried in the POST body. args is the
-          // full resume object and must include its id.
+          // Update in place: the id goes in the URL path (PUT /v1/resumes/{id}),
+          // the full resume object is the body. resume_id + trio uuids preserved.
           if (typeof args.id !== "string" || args.id.length === 0) {
             return { content: [{ type: "text", text: "id is required to update a resume" }], isError: true };
           }
-          const result = await backend.updateResume(args);
+          const result = await backend.updateResume(args.id, args);
           return json(result);
         }
         case "laddro.resume.delete": {
