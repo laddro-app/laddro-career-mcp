@@ -57,10 +57,11 @@ export class CareerApiClient {
     return this.request("POST", "/v1/resumes", body);
   }
 
-  // Update an existing resume. career-api has no PUT /v1/resumes/:id — the
-  // POST /v1/resumes endpoint upserts on the `id` carried in the body.
-  async updateResume(body: Record<string, unknown>): Promise<unknown> {
-    return this.request("POST", "/v1/resumes", body);
+  // Update an existing resume IN PLACE via PUT /v1/resumes/{id} — preserves
+  // resume_id and the trio uuids. (POST /v1/resumes always mints a new
+  // resume_id, so using it to "update" would create a duplicate.)
+  async updateResume(resumeId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request("PUT", `/v1/resumes/${encodeURIComponent(resumeId)}`, body);
   }
 
   async deleteResume(resumeId: string): Promise<unknown> {
