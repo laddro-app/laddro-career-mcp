@@ -5,9 +5,24 @@ import { resolveCoverLetterSchema, resolveResumeSchema } from "./schemas.js";
 
 const CONNECTOR_TOOL_NAMES = new Set([
   "laddro.resume.schema",
+  "laddro.resume.list",
+  "laddro.resume.get",
   "laddro.resume.create",
   "laddro.resume.update",
+  "laddro.resume.delete",
+  "laddro.resume.setDefault",
+  "laddro.resume.changeTemplate",
+  "laddro.resume.tailor",
+  "laddro.resume.exportPdf",
   "laddro.coverLetter.schema",
+  "laddro.coverLetter.list",
+  "laddro.coverLetter.get",
+  "laddro.coverLetter.create",
+  "laddro.coverLetter.generate",
+  "laddro.coverLetter.renderPdf",
+  "laddro.templates.list",
+  "laddro.fonts.list",
+  "laddro.languages.list",
 ]);
 
 export function isConnectorTool(name: string) {
@@ -25,20 +40,87 @@ export function createConnectorHandlers(bearerToken: string) {
     try {
       switch (name) {
         case "laddro.resume.schema": {
-          const schema = await resolveResumeSchema(backend);
-          return json(schema);
+          return json(resolveResumeSchema());
         }
         case "laddro.coverLetter.schema": {
-          const schema = await resolveCoverLetterSchema(backend);
-          return json(schema);
+          return json(resolveCoverLetterSchema());
+        }
+        case "laddro.resume.list": {
+          const result = await backend.listResumes();
+          return json(result);
+        }
+        case "laddro.resume.get": {
+          const result = await backend.getResume(args.resumeId as string);
+          return json(result);
         }
         case "laddro.resume.create": {
-          const result = await backend.createResume(buildResumeBody(args));
+          // args IS the full resume object (flat) conforming to the resume schema.
+          const result = await backend.createResume(args);
           return json(result);
         }
         case "laddro.resume.update": {
-          const resumeId = args.resumeId as string;
-          const result = await backend.updateResume(resumeId, buildResumeBody(args));
+          // career-api upserts on the `id` carried in the POST body. args is the
+          // full resume object and must include its id.
+          if (typeof args.id !== "string" || args.id.length === 0) {
+            return { content: [{ type: "text", text: "id is required to update a resume" }], isError: true };
+          }
+          const result = await backend.updateResume(args);
+          return json(result);
+        }
+        case "laddro.resume.delete": {
+          const result = await backend.deleteResume(args.resumeId as string);
+          return json(result);
+        }
+        case "laddro.resume.setDefault": {
+          const result = await backend.setDefaultResume(args.resumeId as string);
+          return json(result);
+        }
+        case "laddro.resume.changeTemplate": {
+          const result = await backend.changeResumeTemplate(
+            args.resumeId as string,
+            args.templateId as string,
+          );
+          return json(result);
+        }
+        case "laddro.resume.tailor": {
+          const result = await backend.tailorResume(buildTailorBody(args));
+          return json(result);
+        }
+        case "laddro.resume.exportPdf": {
+          const result = await backend.exportResumePdf(buildExportBody(args));
+          return json(result);
+        }
+        case "laddro.coverLetter.list": {
+          const result = await backend.listCoverLetters();
+          return json(result);
+        }
+        case "laddro.coverLetter.get": {
+          const result = await backend.getCoverLetter(args.coverLetterId as string);
+          return json(result);
+        }
+        case "laddro.coverLetter.create": {
+          // args holds the flat cover-letter fields (fullName, letterContent, ...).
+          const result = await backend.createCoverLetter(args);
+          return json(result);
+        }
+        case "laddro.coverLetter.generate": {
+          const result = await backend.generateCoverLetter(buildTailorBody(args));
+          return json(result);
+        }
+        case "laddro.coverLetter.renderPdf": {
+          const result = await backend.renderCoverLetterPdf(args.coverLetterId as string);
+          return json(result);
+        }
+        case "laddro.templates.list": {
+          const result = await backend.listTemplates();
+          return json(result);
+        }
+        case "laddro.fonts.list": {
+          const result = await backend.listFonts();
+          return json(result);
+        }
+        case "laddro.languages.list": {
+          const result = await backend.listLanguages();
           return json(result);
         }
         default:
@@ -50,10 +132,28 @@ export function createConnectorHandlers(bearerToken: string) {
   };
 }
 
-function buildResumeBody(args: Record<string, unknown>): Record<string, unknown> {
-  const body: Record<string, unknown> = { content: args.content };
-  if (args.title !== undefined) {
-    body.title = args.title;
+// Shared by laddro.resume.tailor and laddro.coverLetter.generate — both hit a
+// career-api endpoint that accepts { resumeId?, positionName, jobDescription?, jobUrl? }.
+function buildTailorBody(args: Record<string, unknown>): Record<string, unknown> {
+  const body: Record<string, unknown> = { positionName: args.positionName };
+  if (args.resumeId !== undefined) {
+    body.resumeId = args.resumeId;
+  }
+  if (args.jobDescription !== undefined) {
+    body.jobDescription = args.jobDescription;
+  }
+  if (args.jobUrl !== undefined) {
+    body.jobUrl = args.jobUrl;
+  }
+  return body;
+}
+
+function buildExportBody(args: Record<string, unknown>): Record<string, unknown> {
+  const body: Record<string, unknown> = { resumeId: args.resumeId };
+  for (const key of ["templateId", "locale", "font", "colorId"] as const) {
+    if (args[key] !== undefined) {
+      body[key] = args[key];
+    }
   }
   return body;
 }
