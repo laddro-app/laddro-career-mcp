@@ -7,11 +7,23 @@ import { getResourceBaseUrl } from "./oauth.js";
 // entitlements — the same path a developer x-api-key takes. The backend issues
 // the token but never sees this resource call.
 //
-// career-api endpoints:
-//   GET  /v1/resumes/schema           -> JSON Schema for resume content
-//   POST /v1/resumes                  -> create/upsert resume, returns { resumeId }
-//   PUT  /v1/resumes/:id              -> upsert existing resume, returns { resumeId, updatedAt }
-//   GET  /v1/cover-letters/schema     -> JSON Schema for cover-letter content
+// career-api endpoints (api.laddro.com):
+//   GET    /v1/resumes                    -> list resumes
+//   GET    /v1/resumes/{id}               -> get one resume
+//   POST   /v1/resumes                    -> create (no id) OR update (id in body; upserts on id)
+//   DELETE /v1/resumes/{id}               -> delete resume
+//   PATCH  /v1/resumes/{id}/default       -> set as default
+//   PATCH  /v1/resumes/{id}/template      -> change template ({ templateId })
+//   POST   /v1/tailor                     -> tailor resume to a job
+//   POST   /v1/export                     -> export resume PDF
+//   GET    /v1/cover-letters              -> list cover letters
+//   GET    /v1/cover-letters/{id}         -> get one cover letter
+//   POST   /v1/cover-letters              -> create cover letter
+//   POST   /v1/cover-letters/generate     -> AI-generate cover letter
+//   PUT    /v1/cover-letters/{id}/render  -> render cover letter PDF
+//   GET    /v1/templates,/v1/fonts,/v1/languages -> public reference lists
+//   GET    /v1/resumes/schema             -> JSON Schema for resume content (schema fallback)
+//   GET    /v1/cover-letters/schema       -> JSON Schema for cover-letter content (schema fallback)
 export class CareerApiClient {
   private readonly baseUrl: string;
   private readonly bearerToken: string;
@@ -29,16 +41,86 @@ export class CareerApiClient {
     return this.request("GET", "/v1/cover-letters/schema");
   }
 
+  // ─── Resumes ────────────────────────────────────────────────────────────
+
+  async listResumes(): Promise<unknown> {
+    return this.request("GET", "/v1/resumes");
+  }
+
+  async getResume(resumeId: string): Promise<unknown> {
+    return this.request("GET", `/v1/resumes/${encodeURIComponent(resumeId)}`);
+  }
+
   // Create (or upsert when no id) a resume. Backend tags it with
   // `created_via_client_id` so a later connector update can full-replace it.
   async createResume(body: Record<string, unknown>): Promise<unknown> {
     return this.request("POST", "/v1/resumes", body);
   }
 
-  // Upsert an existing resume. Per spec §4 the backend's full-replace guard only
-  // allows replacing resumes tagged with this client; otherwise it copies.
-  async updateResume(resumeId: string, body: Record<string, unknown>): Promise<unknown> {
-    return this.request("PUT", `/v1/resumes/${encodeURIComponent(resumeId)}`, body);
+  // Update an existing resume. career-api has no PUT /v1/resumes/:id — the
+  // POST /v1/resumes endpoint upserts on the `id` carried in the body.
+  async updateResume(body: Record<string, unknown>): Promise<unknown> {
+    return this.request("POST", "/v1/resumes", body);
+  }
+
+  async deleteResume(resumeId: string): Promise<unknown> {
+    return this.request("DELETE", `/v1/resumes/${encodeURIComponent(resumeId)}`);
+  }
+
+  async setDefaultResume(resumeId: string): Promise<unknown> {
+    return this.request("PATCH", `/v1/resumes/${encodeURIComponent(resumeId)}/default`, {
+      id: resumeId,
+    });
+  }
+
+  async changeResumeTemplate(resumeId: string, templateId: string): Promise<unknown> {
+    return this.request("PATCH", `/v1/resumes/${encodeURIComponent(resumeId)}/template`, {
+      templateId,
+    });
+  }
+
+  async tailorResume(body: Record<string, unknown>): Promise<unknown> {
+    return this.request("POST", "/v1/tailor", body);
+  }
+
+  async exportResumePdf(body: Record<string, unknown>): Promise<unknown> {
+    return this.request("POST", "/v1/export", body);
+  }
+
+  // ─── Cover letters ──────────────────────────────────────────────────────
+
+  async listCoverLetters(): Promise<unknown> {
+    return this.request("GET", "/v1/cover-letters");
+  }
+
+  async getCoverLetter(coverLetterId: string): Promise<unknown> {
+    return this.request("GET", `/v1/cover-letters/${encodeURIComponent(coverLetterId)}`);
+  }
+
+  async createCoverLetter(body: Record<string, unknown>): Promise<unknown> {
+    return this.request("POST", "/v1/cover-letters", body);
+  }
+
+  async generateCoverLetter(body: Record<string, unknown>): Promise<unknown> {
+    return this.request("POST", "/v1/cover-letters/generate", body);
+  }
+
+  async renderCoverLetterPdf(coverLetterId: string): Promise<unknown> {
+    return this.request("PUT", `/v1/cover-letters/${encodeURIComponent(coverLetterId)}/render`);
+  }
+
+  // ─── Reference lists (public, no scope) ─────────────────────────────────
+
+  async listTemplates(): Promise<unknown> {
+    return this.request("GET", "/v1/templates");
+  }
+
+  async listFonts(): Promise<unknown> {
+    return this.request("GET", "/v1/fonts");
+  }
+
+  async listLanguages(): Promise<unknown> {
+    return this.request("GET", "/v1/languages");
   }
 
   private async request(method: string, path: string, body?: unknown): Promise<unknown> {
