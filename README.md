@@ -131,6 +131,18 @@ npm run changeset
 
 After the PR merges to `main`, GitHub Actions opens a release PR with the version bump and changelog. Merging that release PR publishes the package to npm and creates the GitHub release. The Cloud Run deploy workflow also runs on `main`, so hosted MCP updates automatically after release merges.
 
+## MCP registry
+
+This server is listed in the [official MCP registry](https://registry.modelcontextprotocol.io) as `com.laddro/career`. `server.json` is the registry manifest; `scripts/sync-version-metadata.mjs` keeps its version in sync with the npm package on every release.
+
+Publishing is automated: `.github/workflows/publish-registry.yml` runs whenever a release changes `server.json` on `main` and pushes the new version to the registry. Auth is DNS-based — the Ed25519 public key lives in the `laddro.com` TXT record, and the matching private key (hex) is stored as the `MCP_PUBLISHER_ED25519_KEY` repo secret.
+
+To publish (or catch up) manually:
+
+```bash
+MCP_PUBLISHER_ED25519_KEY=<hex-private-key> ./scripts/publish-registry.sh
+```
+
 ## Links
 
 - [laddro.com](https://laddro.com)

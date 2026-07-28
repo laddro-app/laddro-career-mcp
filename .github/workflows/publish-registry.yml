@@ -1,0 +1,95 @@
+name: Publish to MCP Registry
+
+# Publishes server.json to the official MCP registry
+# (registry.modelcontextprotocol.io) so the public listing never drifts
+# behind npm again. Auto-fires whenever a release bumps server.json on
+# main; can also be run manually to catch the registry up on demand.
+#
+# Auth: DNS-based. The Ed25519 public key lives in the laddro.com TXT
+# record (v=MCPv1; k=ed25519; p=...). The matching private key (hex) must
+# be stored as the MCP_PUBLISHER_ED25519_KEY repo secret.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - server.json
+  workflow_dispatch: {}
+
+concurrency:
+  group: mcp-registry-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read target version
+        id: meta
+        run: |
+          VERSION="$(node -p "require('./server.json').version")"
+          NAME="$(node -p "require('./server.json').name")"
+          PKG="$(node -p "require('./package.json').name")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
+          echo "pkg=$PKG"         >> "$GITHUB_OUTPUT"
+          echo "Publishing $NAME@$VERSION (npm: $PKG@$VERSION)"
+
+      - name: Wait for npm to expose this version
+        # The registry verifies the npm package/version exists and carries
+        # the matching mcpName. When a release triggers this workflow the
+        # npm publish job may still be running, so poll before publishing.
+        run: |
+          PKG="${{ steps.meta.outputs.pkg }}"
+          VERSION="${{ steps.meta.outputs.version }}"
+          for i in $(seq 1 30); do
+            if npm view "$PKG@$VERSION" version >/dev/null 2>&1; then
+              echo "Found $PKG@$VERSION on npm."
+              exit 0
+            fi
+            echo "Attempt $i: $PKG@$VERSION not on npm yet, waiting 20s..."
+            sleep 20
+          done
+          echo "::error::$PKG@$VERSION never appeared on npm after 10 minutes."
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          set -euo pipefail
+          URL="$(curl -fsSL https://api.github.com/repos/modelcontextprotocol/registry/releases/latest \
+            | grep -oE 'https://[^"]*mcp-publisher_[^"]*_linux_amd64\.tar\.gz' \
+            | head -n1)"
+          if [ -z "$URL" ]; then
+            echo "::error::Could not resolve mcp-publisher linux_amd64 release asset."
+            exit 1
+          fi
+          echo "Downloading $URL"
+          curl -fsSL "$URL" | tar -xz mcp-publisher
+          chmod +x mcp-publisher
+          ./mcp-publisher --help >/dev/null
+
+      - name: Validate server.json
+        run: ./mcp-publisher validate
+
+      - name: Authenticate (DNS)
+        env:
+          MCP_KEY: ${{ secrets.MCP_PUBLISHER_ED25519_KEY }}
+        run: |
+          if [ -z "${MCP_KEY:-}" ]; then
+            echo "::error::MCP_PUBLISHER_ED25519_KEY secret is not set. Add the Ed25519 private key (hex) matching the laddro.com DNS TXT public key."
+            exit 1
+          fi
+          ./mcp-publisher login dns --domain laddro.com --private-key "$MCP_KEY"
+
+      - name: Publish to registry
+        run: ./mcp-publisher publish
+
+      - name: Confirm live version
+        run: |
+          sleep 5
+          echo "Latest entry now on the official registry:"
+          curl -fsSL "https://registry.modelcontextprotocol.io/v0/servers?search=com.laddro" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const s=JSON.parse(d).servers||[];const latest=s.find(x=>x._meta?.['io.modelcontextprotocol.registry/official']?.isLatest)||s.at(-1);console.log(latest?.server?.name, latest?.server?.version);});"
