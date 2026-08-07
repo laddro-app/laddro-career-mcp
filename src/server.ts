@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 
 import { Laddro } from "@laddro/career-sdk";
@@ -30,6 +30,11 @@ const transports = new Map<string, StreamableHTTPServerTransport>();
 const httpServer = createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
   const pathname = normalizePath(url.pathname);
+
+  // Security headers on every response (ChatGPT Apps SDK submission requires a
+  // CSP). This is a JSON/tools-only API that serves no HTML, scripts, or
+  // iframes, so the strictest policy is correct: deny everything + no framing.
+  setSecurityHeaders(res);
 
   // Health check for Cloud Run
   if (req.method === "GET" && pathname === "/health") {
@@ -153,6 +158,23 @@ const httpServer = createServer(async (req, res) => {
 httpServer.listen(PORT, () => {
   console.log(`MCP server listening on port ${PORT}`);
 });
+
+// Restrictive security headers for a JSON/tools-only MCP API. Set before any
+// branch so they apply to health, discovery, MCP, and error responses alike.
+// (Node merges these with per-response writeHead headers; no key collides.)
+function setSecurityHeaders(res: ServerResponse) {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+  );
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains",
+  );
+}
 
 // Legacy/API-key session: x-api-key or non-OAuth bearer → career-api via SDK.
 // Behaves exactly as before the connector existed.
