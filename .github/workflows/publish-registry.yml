@@ -59,9 +59,18 @@ jobs:
       - name: Install mcp-publisher
         run: |
           set -euo pipefail
+          # Upstream dropped the version segment from the asset name: it is
+          # `mcp-publisher_linux_amd64.tar.gz` now, was
+          # `mcp-publisher_<version>_linux_amd64.tar.gz`. Match both, and do not
+          # require the `_` before `linux`.
+          #
+          # `|| true` matters: under `set -o pipefail` a grep that matches
+          # nothing fails the whole assignment, so the job died on a bare
+          # `exit 1` and the error message below never printed. Let the
+          # explicit check do the reporting.
           URL="$(curl -fsSL https://api.github.com/repos/modelcontextprotocol/registry/releases/latest \
-            | grep -oE 'https://[^"]*mcp-publisher_[^"]*_linux_amd64\.tar\.gz' \
-            | head -n1)"
+            | grep -oE 'https://[^"]*mcp-publisher_[^"]*linux_amd64\.tar\.gz' \
+            | head -n1 || true)"
           if [ -z "$URL" ]; then
             echo "::error::Could not resolve mcp-publisher linux_amd64 release asset."
             exit 1
