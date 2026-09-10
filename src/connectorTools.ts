@@ -26,7 +26,7 @@ const resumeInputSchema = {
 // renders the PDF."
 
 const WRITE_HINTS = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
-const READ_HINTS = { readOnlyHint: true, openWorldHint: false } as const;
+const READ_HINTS = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
 const DESTRUCTIVE_HINTS = { readOnlyHint: false, destructiveHint: true, openWorldHint: false } as const;
 
 // The scope a tool requires, or null when it needs no specific scope.
