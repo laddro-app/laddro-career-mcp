@@ -25,6 +25,11 @@ import { version } from "./version.js";
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const baseUrl = process.env.LADDRO_BASE_URL;
 
+// Issued by the OpenAI app submission portal for mcp.laddro.com (app
+// asdk_app_6aa33a86bdfc8191aa20021d5f1ccdae).
+const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
+const OPENAI_APPS_CHALLENGE_TOKEN = "2AHHCzqxbtqteukqI10BU_TSEGXX7q7ZJY4UVLZOESo";
+
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 const httpServer = createServer(async (req, res) => {
@@ -40,6 +45,15 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && pathname === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok" }));
+    return;
+  }
+
+  // ChatGPT Apps domain verification. OpenAI fetches this URL during app
+  // submission and expects the exact token as a plain-text body. The token is
+  // public by design (it only proves domain ownership to OpenAI).
+  if (req.method === "GET" && pathname === OPENAI_APPS_CHALLENGE_PATH) {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end(OPENAI_APPS_CHALLENGE_TOKEN);
     return;
   }
 
