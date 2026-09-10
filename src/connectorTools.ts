@@ -25,7 +25,7 @@ const resumeInputSchema = {
 // Shared mantra across descriptions: "You write the content. Laddro stores it and
 // renders the PDF."
 
-const WRITE_HINTS = { readOnlyHint: false, openWorldHint: false } as const;
+const WRITE_HINTS = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 const READ_HINTS = { readOnlyHint: true, openWorldHint: false } as const;
 const DESTRUCTIVE_HINTS = { readOnlyHint: false, destructiveHint: true, openWorldHint: false } as const;
 
