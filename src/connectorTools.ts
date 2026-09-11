@@ -87,7 +87,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.create",
     description:
-      "Create a resume. Provide the full resume object conforming to laddro.resume.schema (title, locale, personal, summary, optional sections, etc.). You write the content; Laddro stores it and renders the PDF.",
+      "Create a resume. Provide the full resume object conforming to laddro.resume.schema (title, locale, personal, summary, optional sections, etc.). You write the content; Laddro stores it and renders the PDF. To TAILOR a resume to a job: read the original with laddro.resume.get, rewrite the content yourself for the job, then save it HERE as a NEW resume titled after the target role/company - never overwrite the user's existing resume when tailoring.",
     inputSchema: resumeInputSchema,
     outputSchema: {
       type: "object",
@@ -99,7 +99,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.update",
     description:
-      "Update a resume: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. To TAILOR a resume to a job: read it with laddro.resume.get, rewrite the content yourself to match the job posting, then save the full updated object here.",
+      "Update a resume IN PLACE: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. This REPLACES the resume's content - use it only when the user explicitly wants to change this exact resume. For tailoring to a job, do NOT update the original; save the tailored version as a new resume with laddro.resume.create instead.",
     inputSchema: resumeInputSchema,
     outputSchema: permissiveResultSchema,
     annotations: { title: "Update Resume", ...WRITE_HINTS },
