@@ -18,7 +18,6 @@ const CONNECTOR_TOOL_NAMES = new Set([
   "laddro.coverLetter.list",
   "laddro.coverLetter.get",
   "laddro.coverLetter.create",
-  "laddro.coverLetter.generate",
   "laddro.coverLetter.renderPdf",
   "laddro.templates.list",
   "laddro.fonts.list",
@@ -105,10 +104,6 @@ export function createConnectorHandlers(bearerToken: string) {
         case "laddro.coverLetter.create": {
           // args holds the flat cover-letter fields (fullName, letterContent, ...).
           const result = await backend.createCoverLetter(args);
-          return json(result);
-        }
-        case "laddro.coverLetter.generate": {
-          const result = await backend.generateCoverLetter(buildTailorBody(args));
           return json(result);
         }
         case "laddro.coverLetter.renderPdf": {

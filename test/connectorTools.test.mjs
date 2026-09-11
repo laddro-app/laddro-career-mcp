@@ -18,7 +18,6 @@ const expectedNames = [
   "laddro.coverLetter.list",
   "laddro.coverLetter.get",
   "laddro.coverLetter.create",
-  "laddro.coverLetter.generate",
   "laddro.coverLetter.renderPdf",
   "laddro.templates.list",
   "laddro.fonts.list",
