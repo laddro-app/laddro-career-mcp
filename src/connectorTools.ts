@@ -99,7 +99,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.update",
     description:
-      "Update a resume: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object.",
+      "Update a resume: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. To TAILOR a resume to a job: read it with laddro.resume.get, rewrite the content yourself to match the job posting, then save the full updated object here.",
     inputSchema: resumeInputSchema,
     outputSchema: permissiveResultSchema,
     annotations: { title: "Update Resume", ...WRITE_HINTS },
@@ -147,27 +147,6 @@ export const connectorTools: ConnectorTool[] = [
     },
     outputSchema: permissiveResultSchema,
     annotations: { title: "Change Resume Template", ...WRITE_HINTS },
-    requiredScope: SCOPES.resumesWrite,
-  },
-  {
-    name: "laddro.resume.tailor",
-    description:
-      "Tailor a resume to a specific job. Provide a positionName plus either a jobDescription or a jobUrl; optionally target an existing resumeId. Laddro stores the tailored resume and can render the PDF.",
-    inputSchema: {
-      type: "object",
-      required: ["positionName"],
-      properties: {
-        resumeId: {
-          type: "string",
-          description: "Optional resume UUID to tailor; defaults to the user's resume.",
-        },
-        positionName: { type: "string", description: "The role/position being applied for" },
-        jobDescription: { type: "string", description: "The job description text" },
-        jobUrl: { type: "string", description: "URL of the job posting (alternative to jobDescription)" },
-      },
-    },
-    outputSchema: permissiveResultSchema,
-    annotations: { title: "Tailor Resume", ...WRITE_HINTS },
     requiredScope: SCOPES.resumesWrite,
   },
   {
