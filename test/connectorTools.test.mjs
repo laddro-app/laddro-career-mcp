@@ -12,7 +12,6 @@ const expectedNames = [
   "laddro.resume.delete",
   "laddro.resume.setDefault",
   "laddro.resume.changeTemplate",
-  "laddro.resume.tailor",
   "laddro.resume.exportPdf",
   "laddro.coverLetter.schema",
   "laddro.coverLetter.list",

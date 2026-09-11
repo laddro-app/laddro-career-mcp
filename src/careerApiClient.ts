@@ -80,10 +80,6 @@ export class CareerApiClient {
     });
   }
 
-  async tailorResume(body: Record<string, unknown>): Promise<unknown> {
-    return this.request("POST", "/v1/tailor", body);
-  }
-
   async exportResumePdf(body: Record<string, unknown>): Promise<unknown> {
     // output=url: chat callers cannot receive raw PDF bytes — the API stores
     // the PDF and returns { downloadUrl, expiresAt, ... } instead.
@@ -102,10 +98,6 @@ export class CareerApiClient {
 
   async createCoverLetter(body: Record<string, unknown>): Promise<unknown> {
     return this.request("POST", "/v1/cover-letters", body);
-  }
-
-  async generateCoverLetter(body: Record<string, unknown>): Promise<unknown> {
-    return this.request("POST", "/v1/cover-letters/generate", body);
   }
 
   async renderCoverLetterPdf(coverLetterId: string): Promise<unknown> {

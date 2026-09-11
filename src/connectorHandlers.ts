@@ -12,7 +12,6 @@ const CONNECTOR_TOOL_NAMES = new Set([
   "laddro.resume.delete",
   "laddro.resume.setDefault",
   "laddro.resume.changeTemplate",
-  "laddro.resume.tailor",
   "laddro.resume.exportPdf",
   "laddro.coverLetter.schema",
   "laddro.coverLetter.list",
@@ -85,10 +84,6 @@ export function createConnectorHandlers(bearerToken: string) {
           );
           return json(result);
         }
-        case "laddro.resume.tailor": {
-          const result = await backend.tailorResume(buildTailorBody(args));
-          return json(result);
-        }
         case "laddro.resume.exportPdf": {
           const result = await backend.exportResumePdf(buildExportBody(args));
           return json(result);
@@ -138,22 +133,6 @@ function firstNonEmptyString(...values: unknown[]): string | undefined {
     }
   }
   return undefined;
-}
-
-// Shared by laddro.resume.tailor and laddro.coverLetter.generate — both hit a
-// career-api endpoint that accepts { resumeId?, positionName, jobDescription?, jobUrl? }.
-function buildTailorBody(args: Record<string, unknown>): Record<string, unknown> {
-  const body: Record<string, unknown> = { positionName: args.positionName };
-  if (args.resumeId !== undefined) {
-    body.resumeId = args.resumeId;
-  }
-  if (args.jobDescription !== undefined) {
-    body.jobDescription = args.jobDescription;
-  }
-  if (args.jobUrl !== undefined) {
-    body.jobUrl = args.jobUrl;
-  }
-  return body;
 }
 
 function buildExportBody(args: Record<string, unknown>): Record<string, unknown> {
