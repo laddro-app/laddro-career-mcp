@@ -193,9 +193,13 @@ function errorCode(error: CareerApiError): string | undefined {
 }
 
 function json(data: unknown): CallToolResult {
+  // career-api replies to some successful calls (DELETE, PATCH) with an empty
+  // body. JSON.stringify(undefined) is undefined - invalid MCP content that
+  // surfaced as a connector error even though the operation succeeded.
+  const normalized = data === undefined || data === null ? { ok: true } : data;
   return {
-    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-    structuredContent: toStructured(data),
+    content: [{ type: "text", text: JSON.stringify(normalized, null, 2) }],
+    structuredContent: toStructured(normalized),
   };
 }
 
