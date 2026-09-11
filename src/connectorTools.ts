@@ -223,7 +223,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.coverLetter.create",
     description:
-      "Create a cover letter. Provide the applicant's full name and the letter body; Laddro stores it and renders the PDF.",
+      "Save a cover letter. YOU write the letter text (based on the user's resume and the job they describe), then provide the applicant's full name and the letter body; Laddro stores it and renders the PDF.",
     inputSchema: {
       type: "object",
       required: ["fullName", "letterContent"],
@@ -241,27 +241,6 @@ export const connectorTools: ConnectorTool[] = [
     },
     outputSchema: permissiveResultSchema,
     annotations: { title: "Create Cover Letter", ...WRITE_HINTS },
-    requiredScope: SCOPES.coverLettersWrite,
-  },
-  {
-    name: "laddro.coverLetter.generate",
-    description:
-      "AI-generate a cover letter from the user's resume and a job. Provide a positionName plus either a jobDescription or a jobUrl; optionally target an existing resumeId. Laddro stores the generated cover letter.",
-    inputSchema: {
-      type: "object",
-      required: ["positionName"],
-      properties: {
-        resumeId: {
-          type: "string",
-          description: "Optional resume UUID to base the letter on; defaults to the user's resume.",
-        },
-        positionName: { type: "string", description: "The role/position being applied for" },
-        jobDescription: { type: "string", description: "The job description text" },
-        jobUrl: { type: "string", description: "URL of the job posting (alternative to jobDescription)" },
-      },
-    },
-    outputSchema: permissiveResultSchema,
-    annotations: { title: "Generate Cover Letter", ...WRITE_HINTS },
     requiredScope: SCOPES.coverLettersWrite,
   },
   {
