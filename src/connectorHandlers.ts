@@ -59,12 +59,16 @@ export function createConnectorHandlers(bearerToken: string) {
           return json(result);
         }
         case "laddro.resume.update": {
-          // Update in place: the id goes in the URL path (PUT /v1/resumes/{id}),
-          // the full resume object is the body. resume_id + trio uuids preserved.
-          if (typeof args.id !== "string" || args.id.length === 0) {
-            return { content: [{ type: "text", text: "id is required to update a resume" }], isError: true };
+          // Update in place: the resume UUID goes in the URL path
+          // (PUT /v1/resumes/{resumeId}), the full resume object is the body.
+          // resume_id + trio uuids preserved. Accept `resumeId` (preferred; the
+          // UUID that list/get expose) with `id` as the legacy alias — the API
+          // resolves by resume_id, so the internal numeric id never matches.
+          const resumeId = firstNonEmptyString(args.resumeId, args.id);
+          if (!resumeId) {
+            return { content: [{ type: "text", text: "resumeId (the UUID from list/get) is required to update a resume" }], isError: true };
           }
-          const result = await backend.updateResume(args.id, args);
+          const result = await backend.updateResume(resumeId, args);
           return json(result);
         }
         case "laddro.resume.delete": {
@@ -130,6 +134,15 @@ export function createConnectorHandlers(bearerToken: string) {
       return toToolError(error);
     }
   };
+}
+
+function firstNonEmptyString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 // Shared by laddro.resume.tailor and laddro.coverLetter.generate — both hit a
