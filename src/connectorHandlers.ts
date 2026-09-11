@@ -147,8 +147,21 @@ function buildExportBody(args: Record<string, unknown>): Record<string, unknown>
 
 function toToolError(error: unknown): CallToolResult {
   if (error instanceof CareerApiError) {
-    // Map insufficient_scope / forbidden / unauthorized to a readable MCP error.
     const code = errorCode(error);
+    // Entitlement walls are data, not failures. Returning them as a normal
+    // structured result lets the model relay the upsell (message + clickable
+    // plans link) instead of framing it as "Laddro failed".
+    if (code === "requires_upgrade" || code === "insufficient_credits") {
+      const body = (error.body && typeof error.body === "object" ? error.body : {}) as Record<string, unknown>;
+      return json({
+        status: "upgrade_required",
+        message: error.message,
+        ...(typeof body.upgradeUrl === "string" ? { upgradeUrl: body.upgradeUrl } : {}),
+        instructions:
+          "Explain this to the user in a friendly way and share the upgradeUrl as a clickable link so they can subscribe for unlimited downloads or buy a credit pack.",
+      });
+    }
+    // Map insufficient_scope / forbidden / unauthorized to a readable MCP error.
     const text = code ? `${code}: ${error.message}` : error.message;
     return { content: [{ type: "text", text }], isError: true };
   }
@@ -159,11 +172,15 @@ function toToolError(error: unknown): CallToolResult {
 function errorCode(error: CareerApiError): string | undefined {
   if (error.body && typeof error.body === "object") {
     const body = error.body as Record<string, unknown>;
-    if (typeof body.error === "string") {
-      return body.error;
-    }
+    // career-api puts the machine code in `code` and the human message in
+    // `error`; prefer `code` so the message is never doubled up as its own
+    // prefix. OAuth-style bodies ({error, error_description}) still resolve
+    // via the `error` fallback.
     if (typeof body.code === "string") {
       return body.code;
+    }
+    if (typeof body.error === "string") {
+      return body.error;
     }
   }
   if (error.status === 403) {
