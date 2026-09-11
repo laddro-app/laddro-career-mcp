@@ -101,7 +101,9 @@ export class CareerApiClient {
   }
 
   async renderCoverLetterPdf(coverLetterId: string): Promise<unknown> {
-    return this.request("PUT", `/v1/cover-letters/${encodeURIComponent(coverLetterId)}/render`);
+    // output=url: chat callers cannot receive raw PDF bytes — the API stores
+    // the PDF and returns { downloadUrl, expiresAt, ... } instead.
+    return this.request("PUT", `/v1/cover-letters/${encodeURIComponent(coverLetterId)}/render?output=url`);
   }
 
   // ─── Reference lists (public, no scope) ─────────────────────────────────

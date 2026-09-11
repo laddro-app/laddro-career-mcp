@@ -224,7 +224,8 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.coverLetter.renderPdf",
-    description: "Render a cover letter to PDF by id. Returns the rendered artifact info.",
+    description:
+      "Render a cover letter to PDF by id. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user.",
     inputSchema: {
       type: "object",
       required: ["coverLetterId"],
