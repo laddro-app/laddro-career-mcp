@@ -152,7 +152,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.exportPdf",
     description:
-      "Export a resume to PDF. Provide the resumeId; optionally override template, locale, font, or colorId. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user.",
+      "Export a resume to PDF. Provide the resumeId; optionally override template, locale, font, or colorId. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user. The user's first resume download is free; after that downloads need a Laddro subscription (unlimited) or credits (1 per download). If the result has status upgrade_required, relay its message and share its upgradeUrl as a clickable link.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -225,7 +225,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.coverLetter.renderPdf",
     description:
-      "Render a cover letter to PDF by id. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user.",
+      "Render a cover letter to PDF by id. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user. The user's first cover letter download is free; after that downloads need a Laddro subscription (unlimited) or credits (1 per download). If the result has status upgrade_required, relay its message and share its upgradeUrl as a clickable link.",
     inputSchema: {
       type: "object",
       required: ["coverLetterId"],
