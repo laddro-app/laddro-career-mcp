@@ -173,7 +173,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.exportPdf",
     description:
-      "Export a resume to PDF. Provide the resumeId; optionally override template, locale, font, or colorId. Returns the rendered artifact info.",
+      "Export a resume to PDF. Provide the resumeId; optionally override template, locale, font, or colorId. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],

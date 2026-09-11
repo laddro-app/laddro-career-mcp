@@ -85,7 +85,9 @@ export class CareerApiClient {
   }
 
   async exportResumePdf(body: Record<string, unknown>): Promise<unknown> {
-    return this.request("POST", "/v1/export", body);
+    // output=url: chat callers cannot receive raw PDF bytes — the API stores
+    // the PDF and returns { downloadUrl, expiresAt, ... } instead.
+    return this.request("POST", "/v1/export?output=url", body);
   }
 
   // ─── Cover letters ──────────────────────────────────────────────────────
