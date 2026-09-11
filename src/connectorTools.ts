@@ -99,7 +99,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.update",
     description:
-      "Update a resume: include the resume's `id` plus the full updated object.",
+      "Update a resume: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object.",
     inputSchema: resumeInputSchema,
     outputSchema: permissiveResultSchema,
     annotations: { title: "Update Resume", ...WRITE_HINTS },
