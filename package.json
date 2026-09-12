@@ -35,7 +35,7 @@
     "type": "git",
     "url": "https://github.com/laddro-app/laddro-career-mcp"
   },
-  "homepage": "https://docs.laddro.com",
+  "homepage": "https://www.laddro.com/en/mcp",
   "engines": {
     "node": ">=18"
   },
