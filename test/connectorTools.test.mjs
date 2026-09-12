@@ -75,3 +75,27 @@ test("null scopes (no introspection) advertises the full set, requiredScope stri
     assert.equal("requiredScope" in tool, false);
   }
 });
+
+test("update tool protects the default resume and steers tailoring to create", () => {
+  const update = connectorTools.find((tool) => tool.name === "laddro.resume.update");
+  const properties = update.inputSchema.properties ?? {};
+
+  // The flag rides alongside the resume fields; the resume schema survives.
+  assert.equal(properties.confirmEditDefault?.type, "boolean");
+  for (const field of ["title", "locale", "personal", "summary", "sections"]) {
+    assert.ok(field in properties, `update lost resume field: ${field}`);
+  }
+  assert.deepEqual(update.inputSchema.required, ["title", "locale", "personal", "summary"]);
+  assert.ok("$defs" in update.inputSchema, "update lost the $defs needed to resolve section refs");
+
+  // Contract: never tailor through update, and the default is guarded.
+  assert.match(update.description, /NEVER use this for tailoring/);
+  assert.match(update.description, /laddro\.resume\.create/);
+  assert.match(update.description, /default resume is protected/);
+  assert.match(properties.confirmEditDefault.description, /Never set it while tailoring/);
+
+  // create carries the tailoring recipe instead.
+  const create = connectorTools.find((tool) => tool.name === "laddro.resume.create");
+  assert.match(create.description, /NEW resume/);
+  assert.match(create.description, /never overwrite/i);
+});

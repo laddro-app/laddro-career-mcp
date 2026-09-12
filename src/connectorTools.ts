@@ -32,6 +32,25 @@ const DESTRUCTIVE_HINTS = { readOnlyHint: false, destructiveHint: true, openWorl
 // The scope a tool requires, or null when it needs no specific scope.
 export type ConnectorTool = Tool & { requiredScope: string | null };
 
+// The update tool takes the resume fields plus one routing flag. career-api
+// refuses to overwrite the user's default resume without it, so a tailoring
+// request cannot replace the user's main document even if the model reaches
+// for the wrong tool.
+function withConfirmEditDefault(schema: Tool["inputSchema"]): Tool["inputSchema"] {
+  const base = schema as unknown as { properties?: Record<string, unknown> };
+  return {
+    ...(schema as object),
+    properties: {
+      ...(base.properties ?? {}),
+      confirmEditDefault: {
+        type: "boolean",
+        description:
+          "Set true ONLY when the user explicitly asked to change their main (default) resume itself. Never set it while tailoring to a job - save tailored versions as a new resume with laddro.resume.create.",
+      },
+    },
+  } as unknown as Tool["inputSchema"];
+}
+
 const jsonSchemaResultSchema = {
   type: "object" as const,
   description: "A JSON Schema document",
@@ -99,8 +118,8 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.update",
     description:
-      "Update a resume IN PLACE: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. This REPLACES the resume's content - use it only when the user explicitly wants to change this exact resume. For tailoring to a job, do NOT update the original; save the tailored version as a new resume with laddro.resume.create instead.",
-    inputSchema: resumeInputSchema,
+      "Update a resume IN PLACE: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. This REPLACES the resume's content - use it only when the user explicitly wants to change this exact resume. NEVER use this for tailoring: save the tailored version as a new resume with laddro.resume.create instead. The user's default resume is protected and this tool will refuse to overwrite it unless `confirmEditDefault` is true.",
+    inputSchema: withConfirmEditDefault(resumeInputSchema),
     outputSchema: permissiveResultSchema,
     annotations: { title: "Update Resume", ...WRITE_HINTS },
     requiredScope: SCOPES.resumesWrite,
