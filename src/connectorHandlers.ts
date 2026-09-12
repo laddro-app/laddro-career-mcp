@@ -66,7 +66,10 @@ export function createConnectorHandlers(bearerToken: string) {
           if (!resumeId) {
             return { content: [{ type: "text", text: "resumeId (the UUID from list/get) is required to update a resume" }], isError: true };
           }
-          const result = await backend.updateResume(resumeId, args);
+          // confirmEditDefault is a routing flag, not resume content — the
+          // API takes it as a query param and would otherwise reject it.
+          const { confirmEditDefault, ...resumeBody } = args;
+          const result = await backend.updateResume(resumeId, resumeBody, confirmEditDefault === true);
           return json(result);
         }
         case "laddro.resume.delete": {
@@ -148,6 +151,18 @@ function buildExportBody(args: Record<string, unknown>): Record<string, unknown>
 function toToolError(error: unknown): CallToolResult {
   if (error instanceof CareerApiError) {
     const code = errorCode(error);
+    // The default resume is protected server-side: a refusal is a policy
+    // outcome with a defined recovery (save a new resume), not a malfunction.
+    // Returning it as a normal result keeps the model from telling the user
+    // Laddro broke, and points it at the right tool.
+    if (code === "default_resume_protected") {
+      return json({
+        status: "default_resume_protected",
+        message: error.message,
+        instructions:
+          "The user's default resume was NOT modified. If this was a tailoring request, write the tailored version and save it with laddro.resume.create as a new resume named after the target role or company. Only retry with confirmEditDefault: true when the user explicitly asked to change their main resume itself.",
+      });
+    }
     // Entitlement walls are data, not failures. Returning them as a normal
     // structured result lets the model relay the upsell (message + clickable
     // plans link) instead of framing it as "Laddro failed".

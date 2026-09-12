@@ -60,8 +60,16 @@ export class CareerApiClient {
   // Update an existing resume IN PLACE via PUT /v1/resumes/{id} — preserves
   // resume_id and the trio uuids. (POST /v1/resumes always mints a new
   // resume_id, so using it to "update" would create a duplicate.)
-  async updateResume(resumeId: string, body: Record<string, unknown>): Promise<unknown> {
-    return this.request("PUT", `/v1/resumes/${encodeURIComponent(resumeId)}`, body);
+  // confirmEditDefault opts in to overwriting the user's DEFAULT resume. The
+  // API refuses that by default (409 default_resume_protected) so a tailoring
+  // request can never silently replace the user's main document.
+  async updateResume(
+    resumeId: string,
+    body: Record<string, unknown>,
+    confirmEditDefault = false
+  ): Promise<unknown> {
+    const path = `/v1/resumes/${encodeURIComponent(resumeId)}`;
+    return this.request("PUT", confirmEditDefault ? `${path}?confirmEditDefault=true` : path, body);
   }
 
   async deleteResume(resumeId: string): Promise<unknown> {
