@@ -60,7 +60,6 @@ x-api-key: laddro_live_...
 | `laddro.templates.get` | Get template colors and fonts |
 | `laddro.fonts.list` | All available font families |
 | `laddro.languages.list` | All 14 supported locales |
-| `laddro.models.list` | AI providers for BYOK |
 | `laddro.resumes.list` | User's resumes |
 | `laddro.resumes.get` | Resume metadata |
 | `laddro.resumes.render` | Re-render with new template settings |
@@ -71,9 +70,6 @@ x-api-key: laddro_live_...
 | `laddro.coverLetters.create` | Create manually |
 | `laddro.coverLetters.generate` | AI-generate from resume + job |
 | `laddro.coverLetters.render` | Render with template settings |
-| `laddro.settings.get` | Current AI provider config |
-| `laddro.settings.updateModel` | Set BYOK provider |
-| `laddro.settings.deleteModel` | Remove BYOK config |
 
 ## Connector (OAuth) mode
 

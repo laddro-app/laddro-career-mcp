@@ -11,7 +11,6 @@ const expectedTools = [
   "laddro.templates.get",
   "laddro.fonts.list",
   "laddro.languages.list",
-  "laddro.models.list",
   "laddro.resumes.list",
   "laddro.resumes.get",
   "laddro.resumes.render",
@@ -22,9 +21,6 @@ const expectedTools = [
   "laddro.coverLetters.create",
   "laddro.coverLetters.generate",
   "laddro.coverLetters.render",
-  "laddro.settings.get",
-  "laddro.settings.updateModel",
-  "laddro.settings.deleteModel",
 ];
 
 const expectedRequiredFields = {
@@ -37,7 +33,6 @@ const expectedRequiredFields = {
   "laddro.coverLetters.create": ["fullName", "letterContent"],
   "laddro.coverLetters.generate": ["positionName"],
   "laddro.coverLetters.render": ["coverLetterId", "templateId"],
-  "laddro.settings.updateModel": ["provider", "apiKey"],
 };
 
 test("publishes the exact supported MCP tool catalog", () => {
@@ -63,18 +58,12 @@ test("every published tool has production-grade metadata", () => {
   }
 });
 
-test("dangerous settings removal is marked destructive", () => {
-  const deleteModel = tools.find((tool) => tool.name === "laddro.settings.deleteModel");
-  assert.equal(deleteModel?.annotations?.destructiveHint, true);
-});
 
 test("write tools are not accidentally marked read-only", () => {
   const writeToolNames = [
     "laddro.resumes.tailor",
     "laddro.coverLetters.create",
     "laddro.coverLetters.generate",
-    "laddro.settings.updateModel",
-    "laddro.settings.deleteModel",
   ];
 
   for (const name of writeToolNames) {

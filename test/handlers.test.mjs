@@ -40,12 +40,6 @@ const handlerCases = [
     expectedJson: { ok: "languages.list" },
   },
   {
-    name: "laddro.models.list",
-    args: {},
-    client: { templates: { models: async () => ({ ok: "models.list" }) } },
-    expectedJson: { ok: "models.list" },
-  },
-  {
     name: "laddro.resumes.list",
     args: { limit: 10, offset: 5 },
     client: { resumes: { list: async (args) => args } },
@@ -113,24 +107,6 @@ const handlerCases = [
     args: { coverLetterId: "cover-1", templateId: "GRAPHITE", locale: "en", colorId: "blue", font: "Inter", spacing: 1.1, margin: 12, fontSize: 10, pageNumbering: "simple" },
     client: { coverLetters: { render: async () => binaryFixture } },
     expectedMimeType: "application/pdf",
-  },
-  {
-    name: "laddro.settings.get",
-    args: {},
-    client: { settings: { get: async () => ({ provider: "openai" }) } },
-    expectedJson: { provider: "openai" },
-  },
-  {
-    name: "laddro.settings.updateModel",
-    args: { provider: "openai", model: "gpt-4.1-mini", apiKey: "sk-test" },
-    client: { settings: { updateModel: async (args) => args } },
-    expectedJson: { provider: "openai", model: "gpt-4.1-mini", apiKey: "sk-test" },
-  },
-  {
-    name: "laddro.settings.deleteModel",
-    args: {},
-    client: { settings: { deleteModel: async () => ({ message: "removed" }) } },
-    expectedJson: { message: "removed" },
   },
 ];
 

@@ -22,10 +22,6 @@ export function createHandlers(client: Laddro) {
         const languages = await client.templates.languages();
         return json(languages);
       }
-      case "laddro_list_models": {
-        const models = await client.templates.models();
-        return json(models);
-      }
       case "laddro_list_resumes": {
         const list = await client.resumes.list({
           limit: args.limit as number | undefined,
@@ -131,22 +127,6 @@ export function createHandlers(client: Laddro) {
         });
         return binary(pdf, "application/pdf");
       }
-      case "laddro_get_settings": {
-        const settings = await client.settings.get();
-        return json(settings);
-      }
-      case "laddro_update_ai_model": {
-        const result = await client.settings.updateModel({
-          provider: args.provider as string,
-          model: args.model as string | undefined,
-          apiKey: args.apiKey as string,
-        });
-        return json(result);
-      }
-      case "laddro_delete_ai_model": {
-        const result = await client.settings.deleteModel();
-        return json(result);
-      }
       default:
         return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     }
@@ -158,7 +138,6 @@ const toolNameAliases: Record<string, string> = {
   "laddro.templates.get": "laddro_get_template",
   "laddro.fonts.list": "laddro_list_fonts",
   "laddro.languages.list": "laddro_list_languages",
-  "laddro.models.list": "laddro_list_models",
   "laddro.resumes.list": "laddro_list_resumes",
   "laddro.resumes.get": "laddro_get_resume",
   "laddro.resumes.render": "laddro_render_resume",
@@ -169,9 +148,6 @@ const toolNameAliases: Record<string, string> = {
   "laddro.coverLetters.create": "laddro_create_cover_letter",
   "laddro.coverLetters.generate": "laddro_generate_cover_letter",
   "laddro.coverLetters.render": "laddro_render_cover_letter",
-  "laddro.settings.get": "laddro_get_settings",
-  "laddro.settings.updateModel": "laddro_update_ai_model",
-  "laddro.settings.deleteModel": "laddro_delete_ai_model",
 };
 
 function normalizeToolName(name: string) {

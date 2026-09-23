@@ -38,21 +38,7 @@ const pdfResultSchema = {
   },
 };
 
-const settingsSchema = {
-  type: "object" as const,
-  properties: {
-    provider: { type: "string" },
-    model: { type: "string" },
-    hasKey: { type: "boolean" },
-  },
-};
 
-const messageSchema = {
-  type: "object" as const,
-  properties: {
-    message: { type: "string" },
-  },
-};
 
 export const tools: Tool[] = [
   {
@@ -88,13 +74,6 @@ export const tools: Tool[] = [
     inputSchema: { type: "object", properties: {} },
     outputSchema: { type: "object", properties: { languages: { type: "array", items: { type: "object", properties: { code: { type: "string" }, name: { type: "string" } } } } } },
     annotations: { title: "List Languages", readOnlyHint: true, openWorldHint: false },
-  },
-  {
-    name: "laddro.models.list",
-    description: "List all supported AI providers and models for Bring Your Own Key (BYOK)",
-    inputSchema: { type: "object", properties: {} },
-    outputSchema: { type: "object", properties: { providers: { type: "array", items: { type: "object", properties: { name: { type: "string" }, models: { type: "array", items: { type: "string" } } } } } } },
-    annotations: { title: "List AI Models", readOnlyHint: true, openWorldHint: false },
   },
   {
     name: "laddro.resumes.list",
@@ -273,34 +252,5 @@ export const tools: Tool[] = [
     },
     outputSchema: pdfResultSchema,
     annotations: { title: "Render Cover Letter PDF", readOnlyHint: true, openWorldHint: false },
-  },
-  {
-    name: "laddro.settings.get",
-    description: "Get the current AI provider and model configuration for the authenticated user",
-    inputSchema: { type: "object", properties: {} },
-    outputSchema: settingsSchema,
-    annotations: { title: "Get AI Settings", readOnlyHint: true, openWorldHint: false },
-  },
-  {
-    name: "laddro.settings.updateModel",
-    description: "Configure the AI provider and model for BYOK (Bring Your Own Key). Saves an encrypted API key for the chosen provider.",
-    inputSchema: {
-      type: "object",
-      required: ["provider", "apiKey"],
-      properties: {
-        provider: { type: "string", description: "AI provider name (e.g. Anthropic, OpenAI, Google, DeepSeek)" },
-        model: { type: "string", description: "Model identifier (uses provider's recommended model if omitted)" },
-        apiKey: { type: "string", description: "Your API key for the chosen provider" },
-      },
-    },
-    outputSchema: messageSchema,
-    annotations: { title: "Update AI Provider", readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "laddro.settings.deleteModel",
-    description: "Remove the saved AI provider configuration, reverting to Laddro's default AI model",
-    inputSchema: { type: "object", properties: {} },
-    outputSchema: messageSchema,
-    annotations: { title: "Delete AI Provider Config", readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   },
 ];
