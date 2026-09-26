@@ -94,3 +94,22 @@ test("README documents every published tool", async () => {
     assert.ok(readme.includes(`\`${name}\``), `README is missing ${name}`);
   }
 });
+
+// Same requirement as the connector surface: all four hints explicit on every
+// tool, and a billable download is never advertised as read-only.
+test("every published tool sets all four annotation hints explicitly", () => {
+  for (const tool of tools) {
+    const { readOnlyHint, destructiveHint, idempotentHint, openWorldHint } = tool.annotations ?? {};
+    for (const [hint, value] of Object.entries({ readOnlyHint, destructiveHint, idempotentHint, openWorldHint })) {
+      assert.equal(typeof value, "boolean", `${tool.name} must set ${hint} to true or false, got ${value}`);
+    }
+  }
+});
+
+test("rendering or exporting a PDF is a billable action, not a read", () => {
+  for (const name of ["laddro.resumes.render", "laddro.resumes.export", "laddro.coverLetters.render"]) {
+    const tool = tools.find((candidate) => candidate.name === name);
+    assert.equal(tool?.annotations?.readOnlyHint, false, `${name} spends a download credit, so it is not read-only`);
+    assert.equal(tool?.annotations?.idempotentHint, false, `${name} can spend another credit on a repeat call`);
+  }
+});

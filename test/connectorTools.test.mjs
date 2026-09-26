@@ -99,3 +99,61 @@ test("update tool protects the default resume and steers tailoring to create", (
   assert.match(create.description, /NEW resume/);
   assert.match(create.description, /never overwrite/i);
 });
+
+// OpenAI app review rejects a submission when any annotation hint is absent
+// (read as null) or does not match the tool's real behaviour. This pins all four
+// hints for all 17 tools so neither can regress silently.
+const expectedHints = {
+  // reads
+  "laddro.resume.schema": [true, false, true, false],
+  "laddro.resume.list": [true, false, true, false],
+  "laddro.resume.get": [true, false, true, false],
+  "laddro.coverLetter.schema": [true, false, true, false],
+  "laddro.coverLetter.list": [true, false, true, false],
+  "laddro.coverLetter.get": [true, false, true, false],
+  "laddro.templates.list": [true, false, true, false],
+  "laddro.fonts.list": [true, false, true, false],
+  "laddro.languages.list": [true, false, true, false],
+  // additive writes: a second call stores a second document
+  "laddro.resume.create": [false, false, false, false],
+  "laddro.coverLetter.create": [false, false, false, false],
+  // full in-place replacement overwrites content that cannot be recovered
+  "laddro.resume.update": [false, true, true, false],
+  // permanent deletion
+  "laddro.resume.delete": [false, true, true, false],
+  // settings: overwrite a field, not document content
+  "laddro.resume.setDefault": [false, false, true, false],
+  "laddro.resume.changeTemplate": [false, false, true, false],
+  // downloads are billed (1 credit after the first free one), so not read-only
+  "laddro.resume.exportPdf": [false, false, false, false],
+  "laddro.coverLetter.renderPdf": [false, false, false, false],
+};
+
+test("every connector tool sets all four annotation hints explicitly", () => {
+  for (const tool of connectorTools) {
+    const { readOnlyHint, destructiveHint, idempotentHint, openWorldHint } = tool.annotations ?? {};
+    for (const [hint, value] of Object.entries({ readOnlyHint, destructiveHint, idempotentHint, openWorldHint })) {
+      assert.equal(typeof value, "boolean", `${tool.name} must set ${hint} to true or false, got ${value}`);
+    }
+  }
+});
+
+test("connector annotation hints match the documented behaviour of each tool", () => {
+  assert.deepEqual(Object.keys(expectedHints).sort(), [...expectedNames].sort());
+  for (const tool of connectorTools) {
+    const a = tool.annotations;
+    assert.deepEqual(
+      [a.readOnlyHint, a.destructiveHint, a.idempotentHint, a.openWorldHint],
+      expectedHints[tool.name],
+      `${tool.name} hints drifted from its documented behaviour`,
+    );
+  }
+});
+
+test("a read-only tool is never also flagged destructive", () => {
+  for (const tool of connectorTools) {
+    if (tool.annotations.readOnlyHint) {
+      assert.equal(tool.annotations.destructiveHint, false, `${tool.name} cannot be read-only and destructive`);
+    }
+  }
+});
