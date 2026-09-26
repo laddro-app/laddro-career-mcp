@@ -40,13 +40,58 @@ const pdfResultSchema = {
 
 
 
+// Tool annotation hints. All four are set EXPLICITLY on every tool (never
+// omitted, so a client never reads one as null), and each value describes what
+// the tool actually does. See ANNOTATIONS.md for the per-tool rationale.
+//
+// openWorldHint is false throughout: every tool talks only to the caller's own
+// Laddro account via api.laddro.com. Nothing here searches the web or reaches a
+// third party.
+
+// Reads: return data, change nothing; repeating one changes nothing.
+const READ_HINTS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Additive writes: each call stores a NEW document, so calling twice produces
+// two documents. Nothing existing is overwritten.
+const CREATE_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
+// Producing a downloadable PDF. NOT read-only: career-api's feature gate bills a
+// download (first per document type free, then 1 credit) and writes a
+// feature_usage ledger row, so a render has a side effect on the user's balance.
+// Not idempotent for the same reason. It destroys nothing.
+const RENDER_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
+// Metered AI actions (tailor, cover-letter generation): each call deducts 1
+// credit and produces a new artifact, so neither read-only nor idempotent.
+const AI_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
 export const tools: Tool[] = [
   {
     name: "laddro.templates.list",
     description: "List all available resume templates with ATS scores and layout types",
     inputSchema: { type: "object", properties: {} },
     outputSchema: { type: "object", properties: { templates: { type: "array", items: templateSchema } } },
-    annotations: { title: "List Templates", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "List Templates", ...READ_HINTS },
   },
   {
     name: "laddro.templates.get",
@@ -59,21 +104,21 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: templateSchema,
-    annotations: { title: "Get Template Details", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get Template Details", ...READ_HINTS },
   },
   {
     name: "laddro.fonts.list",
     description: "List all available font families for resume and cover letter rendering",
     inputSchema: { type: "object", properties: {} },
     outputSchema: { type: "object", properties: { fonts: { type: "array", items: { type: "object", properties: { name: { type: "string" } } } } } },
-    annotations: { title: "List Fonts", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "List Fonts", ...READ_HINTS },
   },
   {
     name: "laddro.languages.list",
     description: "List all 14 supported languages and locales for resume content",
     inputSchema: { type: "object", properties: {} },
     outputSchema: { type: "object", properties: { languages: { type: "array", items: { type: "object", properties: { code: { type: "string" }, name: { type: "string" } } } } } },
-    annotations: { title: "List Languages", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "List Languages", ...READ_HINTS },
   },
   {
     name: "laddro.resumes.list",
@@ -86,7 +131,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: { type: "object", properties: { resumes: { type: "array", items: resumeSchema }, total: { type: "number" } } },
-    annotations: { title: "List Resumes", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "List Resumes", ...READ_HINTS },
   },
   {
     name: "laddro.resumes.get",
@@ -99,7 +144,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: resumeSchema,
-    annotations: { title: "Get Resume", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get Resume", ...READ_HINTS },
   },
   {
     name: "laddro.resumes.render",
@@ -120,7 +165,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: pdfResultSchema,
-    annotations: { title: "Render Resume PDF", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Render Resume PDF", ...RENDER_HINTS },
   },
   {
     name: "laddro.resumes.tailor",
@@ -142,7 +187,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: pdfResultSchema,
-    annotations: { title: "Tailor Resume for Job", readOnlyHint: false, openWorldHint: false },
+    annotations: { title: "Tailor Resume for Job", ...AI_HINTS },
   },
   {
     name: "laddro.resumes.export",
@@ -163,7 +208,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: pdfResultSchema,
-    annotations: { title: "Export Resume PDF", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Export Resume PDF", ...RENDER_HINTS },
   },
   {
     name: "laddro.coverLetters.list",
@@ -176,7 +221,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: { type: "object", properties: { coverLetters: { type: "array", items: coverLetterSchema }, total: { type: "number" } } },
-    annotations: { title: "List Cover Letters", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "List Cover Letters", ...READ_HINTS },
   },
   {
     name: "laddro.coverLetters.get",
@@ -189,7 +234,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: coverLetterSchema,
-    annotations: { title: "Get Cover Letter", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get Cover Letter", ...READ_HINTS },
   },
   {
     name: "laddro.coverLetters.create",
@@ -210,7 +255,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: coverLetterSchema,
-    annotations: { title: "Create Cover Letter", readOnlyHint: false, openWorldHint: false },
+    annotations: { title: "Create Cover Letter", ...CREATE_HINTS },
   },
   {
     name: "laddro.coverLetters.generate",
@@ -230,7 +275,7 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: pdfResultSchema,
-    annotations: { title: "Generate Cover Letter", readOnlyHint: false, openWorldHint: false },
+    annotations: { title: "Generate Cover Letter", ...AI_HINTS },
   },
   {
     name: "laddro.coverLetters.render",
@@ -251,6 +296,6 @@ export const tools: Tool[] = [
       },
     },
     outputSchema: pdfResultSchema,
-    annotations: { title: "Render Cover Letter PDF", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Render Cover Letter PDF", ...RENDER_HINTS },
   },
 ];

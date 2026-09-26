@@ -25,9 +25,72 @@ const resumeInputSchema = {
 // Shared mantra across descriptions: "You write the content. Laddro stores it and
 // renders the PDF."
 
-const WRITE_HINTS = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
-const READ_HINTS = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
-const DESTRUCTIVE_HINTS = { readOnlyHint: false, destructiveHint: true, openWorldHint: false } as const;
+// Tool annotation hints. OpenAI's app review requires all four hints to be set
+// EXPLICITLY (true/false, never omitted/null) on every tool, with the value
+// justified by what the tool actually does. Every constant below names the
+// behaviour class it describes; see ANNOTATIONS.md for the per-tool rationale.
+//
+// openWorldHint is false on every tool: each one talks only to the user's own
+// Laddro account through api.laddro.com. None of them searches the web, reaches
+// a third party, or touches anything outside that closed, bounded domain.
+
+// Reads: fetch data, change nothing. Repeating a read changes nothing either.
+const READ_HINTS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Additive writes: each call stores a NEW document. Calling twice produces two
+// documents, so this is not idempotent. Nothing existing is overwritten.
+const CREATE_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
+// Full in-place replacement (PUT): the resume's previous content is overwritten
+// and not recoverable, so this IS destructive. Same body twice leaves the same
+// end state, so it is idempotent.
+const REPLACE_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Permanent deletion: destructive, and repeating it leaves the same end state
+// (the document is already gone).
+const DESTRUCTIVE_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Setting a field to a caller-supplied value (default flag, template id). It
+// overwrites a setting, never document content, so it is not destructive; the
+// same call twice leaves the same value in place, so it is idempotent.
+const SETTING_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+// Producing a downloadable PDF. Not read-only: career-api's feature gate treats
+// a download as a billable action (first one per document type free, then 1
+// credit) and writes a feature_usage ledger row. Not idempotent for the same
+// reason - a second call can consume a second credit and returns a new 24h
+// download URL. It destroys nothing.
+const RENDER_HINTS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+} as const;
 
 // The scope a tool requires, or null when it needs no specific scope.
 export type ConnectorTool = Tool & { requiredScope: string | null };
@@ -112,7 +175,7 @@ export const connectorTools: ConnectorTool[] = [
       type: "object",
       properties: { resumeId: { type: "string" } },
     },
-    annotations: { title: "Create Resume", ...WRITE_HINTS },
+    annotations: { title: "Create Resume", ...CREATE_HINTS },
     requiredScope: SCOPES.resumesWrite,
   },
   {
@@ -121,7 +184,7 @@ export const connectorTools: ConnectorTool[] = [
       "Update a resume IN PLACE: pass `resumeId` (the UUID from list/get, NOT the internal numeric `id`) plus the full updated resume object. This REPLACES the resume's content - use it only when the user explicitly wants to change this exact resume. NEVER use this for tailoring: save the tailored version as a new resume with laddro.resume.create instead. The user's default resume is protected and this tool will refuse to overwrite it unless `confirmEditDefault` is true.",
     inputSchema: withConfirmEditDefault(resumeInputSchema),
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Update Resume", ...WRITE_HINTS },
+    annotations: { title: "Update Resume", ...REPLACE_HINTS },
     requiredScope: SCOPES.resumesWrite,
   },
   {
@@ -149,7 +212,7 @@ export const connectorTools: ConnectorTool[] = [
       },
     },
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Set Default Resume", ...WRITE_HINTS },
+    annotations: { title: "Set Default Resume", ...SETTING_HINTS },
     requiredScope: SCOPES.resumesWrite,
   },
   {
@@ -165,7 +228,7 @@ export const connectorTools: ConnectorTool[] = [
       },
     },
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Change Resume Template", ...WRITE_HINTS },
+    annotations: { title: "Change Resume Template", ...SETTING_HINTS },
     requiredScope: SCOPES.resumesWrite,
   },
   {
@@ -184,7 +247,7 @@ export const connectorTools: ConnectorTool[] = [
       },
     },
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Export Resume PDF", ...WRITE_HINTS },
+    annotations: { title: "Export Resume PDF", ...RENDER_HINTS },
     requiredScope: SCOPES.documentsRender,
   },
   {
@@ -238,7 +301,7 @@ export const connectorTools: ConnectorTool[] = [
       },
     },
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Create Cover Letter", ...WRITE_HINTS },
+    annotations: { title: "Create Cover Letter", ...CREATE_HINTS },
     requiredScope: SCOPES.coverLettersWrite,
   },
   {
@@ -253,7 +316,7 @@ export const connectorTools: ConnectorTool[] = [
       },
     },
     outputSchema: permissiveResultSchema,
-    annotations: { title: "Render Cover Letter PDF", ...WRITE_HINTS },
+    annotations: { title: "Render Cover Letter PDF", ...RENDER_HINTS },
     requiredScope: SCOPES.documentsRender,
   },
   {
