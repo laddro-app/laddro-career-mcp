@@ -65,10 +65,10 @@ const CREATE_HINTS = {
   openWorldHint: false,
 } as const;
 
-// Producing a downloadable PDF. NOT read-only: career-api's feature gate bills a
-// download (first per document type free, then 1 credit) and writes a
-// feature_usage ledger row, so a render has a side effect on the user's balance.
-// Not idempotent for the same reason. It destroys nothing.
+// Producing a downloadable PDF. NOT read-only: career-api's feature gate meters
+// a download and writes a feature_usage ledger row, so a render has a side
+// effect on the user's account. Not idempotent for the same reason. It destroys
+// nothing.
 const RENDER_HINTS = {
   readOnlyHint: false,
   destructiveHint: false,
@@ -76,8 +76,8 @@ const RENDER_HINTS = {
   openWorldHint: false,
 } as const;
 
-// Metered AI actions (tailor, cover-letter generation): each call deducts 1
-// credit and produces a new artifact, so neither read-only nor idempotent.
+// Metered AI actions (tailor, cover-letter generation): each call meters usage
+// and produces a new artifact, so neither read-only nor idempotent.
 const AI_HINTS = {
   readOnlyHint: false,
   destructiveHint: false,
@@ -148,7 +148,7 @@ export const tools: Tool[] = [
   },
   {
     name: "laddro.resumes.render",
-    description: "Render a resume as PDF with specific template and styling settings. Costs 1 API credit.",
+    description: "Render a resume as PDF with specific template and styling settings.",
     inputSchema: {
       type: "object",
       required: ["resumeId", "templateId"],
@@ -191,7 +191,7 @@ export const tools: Tool[] = [
   },
   {
     name: "laddro.resumes.export",
-    description: "Export a resume as a downloadable PDF file with optional template and styling settings. Costs 1 API credit.",
+    description: "Export a resume as a downloadable PDF file with optional template and styling settings.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -279,7 +279,7 @@ export const tools: Tool[] = [
   },
   {
     name: "laddro.coverLetters.render",
-    description: "Render a saved cover letter as PDF with template and styling settings. Costs 1 API credit.",
+    description: "Render a saved cover letter as PDF with template and styling settings.",
     inputSchema: {
       type: "object",
       required: ["coverLetterId", "templateId"],

@@ -157,3 +157,15 @@ test("a read-only tool is never also flagged destructive", () => {
     }
   }
 });
+
+// OpenAI's app submission guidelines forbid selling digital goods or services
+// through an app, including indirect freemium upsells: no plans, no prices, no
+// credits, no purchase links. v1.0.0 was rejected on 2026-10-12 for exactly
+// this, so the commerce vocabulary stays out of every advertised description.
+test("no connector tool description advertises plans, prices, credits or upgrades", () => {
+  const banned = /\b(credits?|subscribe|subscription|upgrade|purchase|buy|price|pricing|plan|billing|checkout)\b/i;
+  for (const tool of connectorTools) {
+    const match = banned.exec(tool.description);
+    assert.equal(match, null, `${tool.name} description must not sell: found "${match?.[0]}"`);
+  }
+});
