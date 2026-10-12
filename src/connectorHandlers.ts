@@ -163,17 +163,22 @@ function toToolError(error: unknown): CallToolResult {
           "The user's default resume was NOT modified. If this was a tailoring request, write the tailored version and save it with laddro.resume.create as a new resume named after the target role or company. Only retry with confirmEditDefault: true when the user explicitly asked to change their main resume itself.",
       });
     }
-    // Entitlement walls are data, not failures. Returning them as a normal
-    // structured result lets the model relay the upsell (message + clickable
-    // plans link) instead of framing it as "Laddro failed".
+    // Entitlement walls are data, not failures, so they come back as a normal
+    // structured result rather than an error the model reports as a breakage.
+    // ⚠️OpenAI app policy (app-submission-guidelines, "Commerce"): a plugin may
+    // explain that a feature is not included in the user's entitlement, but it
+    // must NOT display plans, promote an upgrade, mention prices or credits, or
+    // link to anything that starts a purchase. Selling digital goods or
+    // services through an app - including indirectly via a freemium upsell - is
+    // disallowed and got v1.0.0 rejected on 2026-10-12. So career-api's own
+    // message and its upgradeUrl are deliberately DROPPED here instead of
+    // relayed: that copy is written as an upsell for other surfaces.
     if (code === "requires_upgrade" || code === "insufficient_credits") {
-      const body = (error.body && typeof error.body === "object" ? error.body : {}) as Record<string, unknown>;
       return json({
-        status: "upgrade_required",
-        message: error.message,
-        ...(typeof body.upgradeUrl === "string" ? { upgradeUrl: body.upgradeUrl } : {}),
+        status: "download_not_available",
+        message: "This download is not included in the user's current Laddro account.",
         instructions:
-          "Explain this to the user in a friendly way and share the upgradeUrl as a clickable link so they can subscribe for unlimited downloads or buy a credit pack.",
+          "Tell the user plainly that this download is not available on their Laddro account, and that they can manage it in their Laddro account. Do NOT mention plans, prices, subscriptions, credits or purchases, do not offer to sell anything, and do not provide any link.",
       });
     }
     // Map insufficient_scope / forbidden / unauthorized to a readable MCP error.
