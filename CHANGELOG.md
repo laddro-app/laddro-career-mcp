@@ -1,5 +1,38 @@
 # @laddro/career-mcp
 
+## 0.6.0
+
+### Minor Changes
+
+- 8a6f01f: Remove the four tools that call endpoints the Career API deleted in June.
+
+  `laddro.models.list`, `laddro.settings.get`, `laddro.settings.updateModel` and
+  `laddro.settings.deleteModel` mapped to `GET /v1/models`, `GET /v1/settings` and
+  `PUT`/`DELETE /v1/settings/model`. All four were removed from career-api in
+  `622b228` on 2026-06-27 when BYOK was dropped and AI was routed through ai-core.
+  Verified against production: every one returns 404 today, with and without a
+  key, so any agent calling them got an error rather than an answer.
+
+  This is a breaking change for anyone who wired those four tools, but they have
+  not worked since June — there is nothing behind them to keep.
+
+  The remaining 14 tools were each checked against production and all resolve:
+  public endpoints return 200 and authenticated ones return 401, so none is a
+  dead route.
+
+### Patch Changes
+
+- 7eede46: Set all four MCP annotation hints explicitly on every tool, and correct the ones that did not match behaviour.
+
+  `idempotentHint` was never set, so every tool advertised it as null - the reason OpenAI app review rejected the ChatGPT app. It is now explicit on all tools, alongside `readOnlyHint`, `destructiveHint` and `openWorldHint`.
+
+  Two behaviour mismatches fixed:
+
+  - `laddro.resume.update` is now `destructiveHint: true`. It replaces a resume's entire content in place and the previous version is not recoverable.
+  - `laddro.resumes.render`, `laddro.resumes.export` and `laddro.coverLetters.render` are no longer `readOnlyHint: true`. A download is a billed action: the first per document type is free, each one after costs a credit.
+
+  `ANNOTATIONS.md` documents the justification for every value and the tests pin them.
+
 ## 0.5.1
 
 ### Patch Changes
