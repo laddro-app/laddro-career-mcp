@@ -19,6 +19,8 @@ import {
   PROTECTED_RESOURCE_PATH,
   resolveServerBaseUrl,
 } from "./oauth.js";
+import { SERVER_INSTRUCTIONS } from "./instructions.js";
+import { isTokenRejected } from "./rejectedTokens.js";
 import { tools } from "./tools.js";
 import { version } from "./version.js";
 
@@ -31,6 +33,10 @@ const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
 const OPENAI_APPS_CHALLENGE_TOKEN = "2AHHCzqxbtqteukqI10BU_TSEGXX7q7ZJY4UVLZOESo";
 
 const transports = new Map<string, StreamableHTTPServerTransport>();
+// The bearer each OAuth session is currently presenting. Updated on every
+// request, because the client refreshes its 15-minute access token mid-session
+// and sends the new one on the same session id. See createConnectorHandlers.
+const sessionTokens = new Map<string, { current: string }>();
 
 const httpServer = createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
@@ -96,13 +102,29 @@ const httpServer = createServer(async (req, res) => {
       await transport.handleRequest(req, res);
       if (req.method === "DELETE") {
         transports.delete(sessionId!);
+        sessionTokens.delete(sessionId!);
       }
       return;
     }
 
     if (req.method === "POST") {
+      // A token career-api already refused gets a 401 here, so the client
+      // refreshes it instead of retrying the dead one. See rejectedTokens.ts.
+      const presented = isOAuthBearer(req.headers) ? getBearerToken(req.headers) : undefined;
+      if (presented && isTokenRejected(presented)) {
+        const resourceUrl = resolveServerBaseUrl(req.headers, PORT);
+        res.writeHead(401, {
+          "Content-Type": "application/json",
+          "WWW-Authenticate": `${buildWwwAuthenticate(resourceUrl)}, error="invalid_token"`,
+        });
+        res.end(JSON.stringify({ error: "invalid_token", error_description: "Access token is expired or invalid" }));
+        return;
+      }
+
       // Check if this is an existing session
       if (sessionId && transports.has(sessionId)) {
+        const tokenRef = sessionTokens.get(sessionId);
+        if (tokenRef && presented) tokenRef.current = presented;
         const transport = transports.get(sessionId)!;
         await transport.handleRequest(req, res);
         return;
@@ -134,11 +156,17 @@ const httpServer = createServer(async (req, res) => {
 
       const server = new Server(
         { name: "laddro-career", version },
-        { capabilities: { tools: {}, resources: {}, prompts: {} } },
+        {
+          capabilities: { tools: {}, resources: {}, prompts: {} },
+          // Names the connector tools, so only connector sessions get it; the
+          // API-key session exposes a different tool set (tools.ts).
+          ...(oauthSession ? { instructions: SERVER_INSTRUCTIONS } : {}),
+        },
       );
 
+      const tokenRef = { current: getBearerToken(req.headers) ?? "" };
       if (oauthSession) {
-        wireOAuthSession(server, getBearerToken(req.headers)!);
+        wireOAuthSession(server, () => tokenRef.current);
       } else {
         wireApiKeySession(server, req.headers);
       }
@@ -149,6 +177,7 @@ const httpServer = createServer(async (req, res) => {
       transport.onclose = () => {
         if (transport.sessionId) {
           transports.delete(transport.sessionId);
+          sessionTokens.delete(transport.sessionId);
         }
       };
 
@@ -156,6 +185,7 @@ const httpServer = createServer(async (req, res) => {
 
       if (transport.sessionId) {
         transports.set(transport.sessionId, transport);
+        if (oauthSession) sessionTokens.set(transport.sessionId, tokenRef);
       }
       return;
     }
@@ -218,7 +248,7 @@ function wireApiKeySession(server: Server, headers: import("node:http").Incoming
 // insufficient_scope, which we surface as an MCP tool error. We also keep the
 // read-only career-api tools that work without an API key off the OAuth list —
 // the OAuth session only exposes connector tools (backend-backed).
-function wireOAuthSession(server: Server, bearerToken: string) {
+function wireOAuthSession(server: Server, bearerToken: () => string) {
   const grantedScopes: string[] | null = null; // no introspection; see comment above.
   const connectorToolList = filterConnectorToolsByScopes(grantedScopes);
   const connectorHandler = createConnectorHandlers(bearerToken);

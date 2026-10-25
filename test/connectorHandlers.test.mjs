@@ -97,3 +97,60 @@ test("an entitlement wall is relayed without any commerce content", async () => 
     }
   );
 });
+
+test("each call uses the token the session holds NOW, not the one it opened with", async () => {
+  await withFetch(
+    () => jsonResponse({ resumes: [] }),
+    async (calls) => {
+      let token = "lad_at_first";
+      const handle = createConnectorHandlers(() => token);
+      await handle("laddro.resume.list", {});
+      token = "lad_at_refreshed";
+      await handle("laddro.resume.list", {});
+
+      const sent = calls.map((c) => new Headers(c.init.headers).get("authorization"));
+      assert.deepEqual(sent, ["Bearer lad_at_first", "Bearer lad_at_refreshed"]);
+    }
+  );
+});
+
+test("a token career-api refuses is marked, so the next request is turned away with a 401", async () => {
+  const { isTokenRejected } = await import("../dist/rejectedTokens.js");
+  await withFetch(
+    () => jsonResponse({ error: "Access token has expired", code: "token_expired" }, 401),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_expired");
+      const result = await handle("laddro.resume.list", {});
+
+      assert.equal(result.isError, true);
+      assert.equal(isTokenRejected("lad_at_expired"), true);
+      assert.equal(isTokenRejected("lad_at_someone_else"), false);
+    }
+  );
+});
+
+test("the cover-letter schema tool describes what create accepts, not the stored document", async () => {
+  const handle = createConnectorHandlers("lad_at_test");
+  const result = await handle("laddro.coverLetter.schema", {});
+  const schema = JSON.parse(result.content[0].text);
+
+  assert.ok(schema.properties.letterContent, "letterContent must be a top-level field");
+  assert.ok(schema.properties.fullName, "fullName must be a top-level field");
+  assert.equal(schema.properties.content, undefined, "the nested storage shape makes create 400");
+});
+
+test("the one-resume limit comes back as a way forward, not a dead-end error", async () => {
+  await withFetch(
+    () => jsonResponse({ error: "complete your current resume to at least 70% before creating a new one", code: "limit_exceeded" }, 409),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_test");
+      const result = await handle("laddro.resume.create", { title: "T", locale: "en", personal: {}, summary: {} });
+
+      assert.notEqual(result.isError, true);
+      const payload = JSON.parse(result.content[0].text);
+      assert.equal(payload.status, "unfinished_resume_exists");
+      assert.match(payload.instructions, /laddro\.resume\.update/);
+      assert.match(payload.instructions, /Never overwrite it without asking/);
+    }
+  );
+});
