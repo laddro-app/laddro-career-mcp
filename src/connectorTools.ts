@@ -99,11 +99,21 @@ export type ConnectorTool = Tool & { requiredScope: string | null };
 // refuses to overwrite the user's default resume without it, so a tailoring
 // request cannot replace the user's main document even if the model reaches
 // for the wrong tool.
+//
+// ⚠️ `resumeId` has to be IN the schema and required. It used to be named only
+// in the description, so a client that sticks to the schema (OpenAI strict
+// mode does) had no field to put it in and every update failed with
+// "resumeId is required".
 function withConfirmEditDefault(schema: Tool["inputSchema"]): Tool["inputSchema"] {
-  const base = schema as unknown as { properties?: Record<string, unknown> };
+  const base = schema as unknown as { properties?: Record<string, unknown>; required?: string[] };
   return {
     ...(schema as object),
+    required: ["resumeId", ...(base.required ?? [])],
     properties: {
+      resumeId: {
+        type: "string",
+        description: "The resumeId (UUID) of the CV to replace, from laddro.resume.list or laddro.resume.get.",
+      },
       ...(base.properties ?? {}),
       confirmEditDefault: {
         type: "boolean",
@@ -137,7 +147,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.schema",
     description:
-      "Get the JSON Schema for Laddro resume content. Call this first, then build content that conforms to it. You write the content. Laddro stores it and renders the PDF.",
+      "Get the full JSON Schema of a Laddro CV (resume). Optional: laddro.resume.create already carries the same schema as its input, so call this only if you need the reference on its own.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: jsonSchemaResultSchema,
     annotations: { title: "Get Resume Schema", ...READ_HINTS },
@@ -146,7 +156,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.list",
     description:
-      "List the user's resumes (id, title, template, default flag). Use this to discover resumeIds for the get/update/delete/render tools.",
+      "List the CVs (resumes) saved in the user's Laddro account: resumeId, title, whether it is the default, and dates. Start here whenever the user mentions their CV, so you know what already exists. Use the resumeId with the other resume tools.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: permissiveResultSchema,
     annotations: { title: "List Resumes", ...READ_HINTS },
@@ -154,7 +164,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.resume.get",
-    description: "Get a single resume by id, including its structured content.",
+    description: "Read one of the user's CVs in full (all sections and text). Use it before improving, tailoring or translating a CV, so you work from what the user actually has.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -169,11 +179,13 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.create",
     description:
-      "Create a resume. Provide the full resume object conforming to laddro.resume.schema (title, locale, personal, summary, optional sections, etc.). You write the content; Laddro stores it and renders the PDF. To TAILOR a resume to a job: read the original with laddro.resume.get, rewrite the content yourself for the job, then save it HERE as a NEW resume titled after the target role/company - never overwrite the user's existing resume when tailoring.",
+      "Save a CV (resume) you have written into the user's Laddro account. Pass the whole CV: title, locale (the language it is written in), personal details, summary and sections (employment, education, skills, languages, ...). Dates are \"YYYY-MM\"; text fields accept simple HTML (<p>, <ul>, <li>, <strong>). Only use facts the user gave you. Returns the new CV's id: next call laddro.resume.exportPdf with it and give the user the download link. To TAILOR a CV to a job, read the original with laddro.resume.get, rewrite it for the job, and save it here as a NEW CV titled after the role or company - never overwrite the user's existing CV when tailoring.",
     inputSchema: resumeInputSchema,
     outputSchema: {
       type: "object",
-      properties: { resumeId: { type: "string" } },
+      properties: {
+        id: { type: "string", description: "The new CV's resumeId; pass it to laddro.resume.exportPdf." },
+      },
     },
     annotations: { title: "Create Resume", ...CREATE_HINTS },
     requiredScope: SCOPES.resumesWrite,
@@ -189,7 +201,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.resume.delete",
-    description: "Permanently delete a resume by id. This cannot be undone.",
+    description: "Permanently delete one of the user's CVs. Cannot be undone: only call it when the user clearly asked to delete that CV.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -203,7 +215,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.resume.setDefault",
-    description: "Mark a resume as the user's default resume.",
+    description: "Make one of the user's CVs their main (default) CV in Laddro.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -218,7 +230,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.changeTemplate",
     description:
-      "Change the template of a resume. Use laddro.templates.list to discover valid templateIds.",
+      "Change the design (template) of a saved CV without touching its text. Get valid template ids from laddro.templates.list.",
     inputSchema: {
       type: "object",
       required: ["resumeId", "templateId"],
@@ -234,7 +246,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.resume.exportPdf",
     description:
-      "Export a resume to PDF. Provide the resumeId; optionally override template, locale, font, or colorId. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user. Downloads are limited on some Laddro accounts; if the result has status download_not_available, relay its message as it is.",
+      "Turn a saved CV into a designed PDF. Pass the resumeId; template, font and colour are optional overrides for this PDF only. Returns a downloadUrl (valid for 24 hours): always give it to the user, it is what they asked for. Downloads are limited on some Laddro accounts; if the result has status download_not_available, relay its message as it is.",
     inputSchema: {
       type: "object",
       required: ["resumeId"],
@@ -253,7 +265,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.coverLetter.schema",
     description:
-      "Get the JSON Schema for Laddro cover-letter content. Call this first, then build content that conforms to it. You write the content. Laddro stores it and renders the PDF.",
+      "Get the fields laddro.coverLetter.create accepts. Optional: that tool's input schema is the same.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: jsonSchemaResultSchema,
     annotations: { title: "Get Cover Letter Schema", ...READ_HINTS },
@@ -261,7 +273,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.coverLetter.list",
-    description: "List the user's cover letters (id, title). Use this to discover coverLetterIds.",
+    description: "List the cover letters saved in the user's Laddro account, with their ids and titles.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: permissiveResultSchema,
     annotations: { title: "List Cover Letters", ...READ_HINTS },
@@ -269,7 +281,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.coverLetter.get",
-    description: "Get a single cover letter by id, including its content.",
+    description: "Read one of the user's cover letters in full.",
     inputSchema: {
       type: "object",
       required: ["coverLetterId"],
@@ -284,7 +296,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.coverLetter.create",
     description:
-      "Save a cover letter. YOU write the letter text (based on the user's resume and the job they describe), then provide the applicant's full name and the letter body; Laddro stores it and renders the PDF.",
+      "Save a cover letter you have written into the user's Laddro account. Write it from the user's CV (laddro.resume.get) and the job they describe; fullName and letterContent are required, and letterContent accepts simple HTML (<p>, <ul>, <li>). Returns the new letter's id: next call laddro.coverLetter.renderPdf and give the user the download link.",
     inputSchema: {
       type: "object",
       required: ["fullName", "letterContent"],
@@ -307,7 +319,7 @@ export const connectorTools: ConnectorTool[] = [
   {
     name: "laddro.coverLetter.renderPdf",
     description:
-      "Render a cover letter to PDF by id. Returns a downloadUrl the user can click to download the PDF (link valid for 24 hours) - always share this link with the user. Downloads are limited on some Laddro accounts; if the result has status download_not_available, relay its message as it is.",
+      "Turn a saved cover letter into a designed PDF. Returns a downloadUrl (valid for 24 hours): always give it to the user. Downloads are limited on some Laddro accounts; if the result has status download_not_available, relay its message as it is.",
     inputSchema: {
       type: "object",
       required: ["coverLetterId"],
@@ -321,15 +333,20 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.templates.list",
-    description: "List the available resume/cover-letter templates and their color schemes.",
-    inputSchema: { type: "object", properties: {} },
+    description: "List Laddro's CV designs (templates): id, name, layout, what each is best for, and its ATS score. Pass templateId to get one design in detail, including its colour options (the colorId values laddro.resume.exportPdf accepts).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        templateId: { type: "string", description: "Optional. One template's id, to get its full details and colour options." },
+      },
+    },
     outputSchema: permissiveResultSchema,
     annotations: { title: "List Templates", ...READ_HINTS },
     requiredScope: null,
   },
   {
     name: "laddro.fonts.list",
-    description: "List the available document fonts.",
+    description: "List the fonts a CV or cover letter can use.",
     inputSchema: { type: "object", properties: {} },
     outputSchema: permissiveResultSchema,
     annotations: { title: "List Fonts", ...READ_HINTS },
@@ -337,7 +354,7 @@ export const connectorTools: ConnectorTool[] = [
   },
   {
     name: "laddro.languages.list",
-    description: "List the supported document languages/locales.",
+    description: "List the languages a Laddro CV can be written in (the valid locale values).",
     inputSchema: { type: "object", properties: {} },
     outputSchema: permissiveResultSchema,
     annotations: { title: "List Languages", ...READ_HINTS },

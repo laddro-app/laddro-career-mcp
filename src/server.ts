@@ -19,6 +19,7 @@ import {
   PROTECTED_RESOURCE_PATH,
   resolveServerBaseUrl,
 } from "./oauth.js";
+import { SERVER_INSTRUCTIONS } from "./instructions.js";
 import { isTokenRejected } from "./rejectedTokens.js";
 import { tools } from "./tools.js";
 import { version } from "./version.js";
@@ -155,7 +156,12 @@ const httpServer = createServer(async (req, res) => {
 
       const server = new Server(
         { name: "laddro-career", version },
-        { capabilities: { tools: {}, resources: {}, prompts: {} } },
+        {
+          capabilities: { tools: {}, resources: {}, prompts: {} },
+          // Names the connector tools, so only connector sessions get it; the
+          // API-key session exposes a different tool set (tools.ts).
+          ...(oauthSession ? { instructions: SERVER_INSTRUCTIONS } : {}),
+        },
       );
 
       const tokenRef = { current: getBearerToken(req.headers) ?? "" };

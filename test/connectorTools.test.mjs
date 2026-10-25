@@ -85,7 +85,7 @@ test("update tool protects the default resume and steers tailoring to create", (
   for (const field of ["title", "locale", "personal", "summary", "sections"]) {
     assert.ok(field in properties, `update lost resume field: ${field}`);
   }
-  assert.deepEqual(update.inputSchema.required, ["title", "locale", "personal", "summary"]);
+  assert.deepEqual(update.inputSchema.required, ["resumeId", "title", "locale", "personal", "summary"]);
   assert.ok("$defs" in update.inputSchema, "update lost the $defs needed to resolve section refs");
 
   // Contract: never tailor through update, and the default is guarded.
@@ -96,7 +96,7 @@ test("update tool protects the default resume and steers tailoring to create", (
 
   // create carries the tailoring recipe instead.
   const create = connectorTools.find((tool) => tool.name === "laddro.resume.create");
-  assert.match(create.description, /NEW resume/);
+  assert.match(create.description, /NEW CV/);
   assert.match(create.description, /never overwrite/i);
 });
 
@@ -168,4 +168,11 @@ test("no connector tool description advertises plans, prices, credits or upgrade
     const match = banned.exec(tool.description);
     assert.equal(match, null, `${tool.name} description must not sell: found "${match?.[0]}"`);
   }
+});
+
+test("update names resumeId in its schema and requires it", async () => {
+  const { filterConnectorToolsByScopes } = await import("../dist/connectorTools.js");
+  const update = filterConnectorToolsByScopes(null).find((t) => t.name === "laddro.resume.update");
+  assert.ok(update.inputSchema.properties.resumeId, "a strict client has nowhere to put the id otherwise");
+  assert.ok(update.inputSchema.required.includes("resumeId"));
 });

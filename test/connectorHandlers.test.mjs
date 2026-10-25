@@ -128,3 +128,29 @@ test("a token career-api refuses is marked, so the next request is turned away w
     }
   );
 });
+
+test("the cover-letter schema tool describes what create accepts, not the stored document", async () => {
+  const handle = createConnectorHandlers("lad_at_test");
+  const result = await handle("laddro.coverLetter.schema", {});
+  const schema = JSON.parse(result.content[0].text);
+
+  assert.ok(schema.properties.letterContent, "letterContent must be a top-level field");
+  assert.ok(schema.properties.fullName, "fullName must be a top-level field");
+  assert.equal(schema.properties.content, undefined, "the nested storage shape makes create 400");
+});
+
+test("the one-resume limit comes back as a way forward, not a dead-end error", async () => {
+  await withFetch(
+    () => jsonResponse({ error: "complete your current resume to at least 70% before creating a new one", code: "limit_exceeded" }, 409),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_test");
+      const result = await handle("laddro.resume.create", { title: "T", locale: "en", personal: {}, summary: {} });
+
+      assert.notEqual(result.isError, true);
+      const payload = JSON.parse(result.content[0].text);
+      assert.equal(payload.status, "unfinished_resume_exists");
+      assert.match(payload.instructions, /laddro\.resume\.update/);
+      assert.match(payload.instructions, /Never overwrite it without asking/);
+    }
+  );
+});

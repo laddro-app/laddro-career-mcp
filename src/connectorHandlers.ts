@@ -1,6 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { CareerApiClient, CareerApiError } from "./careerApiClient.js";
+import { connectorTools } from "./connectorTools.js";
 import { isTokenErrorCode, markTokenRejected } from "./rejectedTokens.js";
 import { resolveCoverLetterSchema, resolveResumeSchema } from "./schemas.js";
 
@@ -50,7 +51,13 @@ export function createConnectorHandlers(bearerToken: string | (() => string)) {
           return json(resolveResumeSchema());
         }
         case "laddro.coverLetter.schema": {
-          return json(resolveCoverLetterSchema());
+          // ⚠️ The shape laddro.coverLetter.create SENDS, not the stored
+          // document. resolveCoverLetterSchema() is the nested storage schema
+          // (title/locale/content.personalDetails...), and the tool used to say
+          // "call this first, then build content that conforms to it" - which
+          // made a model post the nested shape and get 400 "letterContent is
+          // required" from the flat endpoint.
+          return json(coverLetterCreateInputSchema());
         }
         case "laddro.resume.list": {
           const result = await backend.listResumes();
@@ -118,7 +125,10 @@ export function createConnectorHandlers(bearerToken: string | (() => string)) {
           return json(result);
         }
         case "laddro.templates.list": {
-          const result = await backend.listTemplates();
+          // The list has no colours; only a single template carries its
+          // availableColors (the colorId values export accepts).
+          const templateId = firstNonEmptyString(args.templateId);
+          const result = templateId ? await backend.getTemplate(templateId) : await backend.listTemplates();
           return json(result);
         }
         case "laddro.fonts.list": {
@@ -147,6 +157,10 @@ export function createConnectorHandlers(bearerToken: string | (() => string)) {
   };
 }
 
+function coverLetterCreateInputSchema(): unknown {
+  return connectorTools.find((tool) => tool.name === "laddro.coverLetter.create")?.inputSchema ?? resolveCoverLetterSchema();
+}
+
 function firstNonEmptyString(...values: unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value === "string" && value.length > 0) {
@@ -173,6 +187,19 @@ function toToolError(error: unknown): CallToolResult {
     // outcome with a defined recovery (save a new resume), not a malfunction.
     // Returning it as a normal result keeps the model from telling the user
     // Laddro broke, and points it at the right tool.
+    // The 70% rule: a user must finish their current CV before starting
+    // another. Most accounts hold an EMPTY CV the web builder created on first
+    // visit, so this hits people who never wrote anything. The raw message
+    // ("complete your current resume to at least 70%") gave the model no way
+    // forward; this does.
+    if (code === "limit_exceeded") {
+      return json({
+        status: "unfinished_resume_exists",
+        message: error.message,
+        instructions:
+          "Nothing was saved. The user already has an unfinished CV in Laddro, and a new one can only be added once that one is mostly complete. Call laddro.resume.list and laddro.resume.get to find it. If it is empty or nearly empty, tell the user and offer to put this CV into it instead; with their OK, save it there with laddro.resume.update (resumeId of that CV, confirmEditDefault: true if it is their default). If it holds real work, ask the user which of the two to keep. Never overwrite it without asking.",
+      });
+    }
     if (code === "default_resume_protected") {
       return json({
         status: "default_resume_protected",

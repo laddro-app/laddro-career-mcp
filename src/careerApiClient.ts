@@ -120,6 +120,10 @@ export class CareerApiClient {
     return this.request("GET", "/v1/templates");
   }
 
+  async getTemplate(templateId: string): Promise<unknown> {
+    return this.request("GET", `/v1/templates/${encodeURIComponent(templateId)}`);
+  }
+
   async listFonts(): Promise<unknown> {
     return this.request("GET", "/v1/fonts");
   }
