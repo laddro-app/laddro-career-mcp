@@ -97,3 +97,34 @@ test("an entitlement wall is relayed without any commerce content", async () => 
     }
   );
 });
+
+test("each call uses the token the session holds NOW, not the one it opened with", async () => {
+  await withFetch(
+    () => jsonResponse({ resumes: [] }),
+    async (calls) => {
+      let token = "lad_at_first";
+      const handle = createConnectorHandlers(() => token);
+      await handle("laddro.resume.list", {});
+      token = "lad_at_refreshed";
+      await handle("laddro.resume.list", {});
+
+      const sent = calls.map((c) => new Headers(c.init.headers).get("authorization"));
+      assert.deepEqual(sent, ["Bearer lad_at_first", "Bearer lad_at_refreshed"]);
+    }
+  );
+});
+
+test("a token career-api refuses is marked, so the next request is turned away with a 401", async () => {
+  const { isTokenRejected } = await import("../dist/rejectedTokens.js");
+  await withFetch(
+    () => jsonResponse({ error: "Access token has expired", code: "token_expired" }, 401),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_expired");
+      const result = await handle("laddro.resume.list", {});
+
+      assert.equal(result.isError, true);
+      assert.equal(isTokenRejected("lad_at_expired"), true);
+      assert.equal(isTokenRejected("lad_at_someone_else"), false);
+    }
+  );
+});

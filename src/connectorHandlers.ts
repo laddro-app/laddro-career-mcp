@@ -1,6 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { CareerApiClient, CareerApiError } from "./careerApiClient.js";
+import { isTokenErrorCode, markTokenRejected } from "./rejectedTokens.js";
 import { resolveCoverLetterSchema, resolveResumeSchema } from "./schemas.js";
 
 const CONNECTOR_TOOL_NAMES = new Set([
@@ -31,10 +32,18 @@ export function isConnectorTool(name: string) {
 // forwarded Bearer token. The backend authenticates, checks scopes, and applies
 // feature-gate entitlements; we surface its errors (incl. insufficient_scope and
 // 403 upgrade-required) as MCP tool errors.
-export function createConnectorHandlers(bearerToken: string) {
-  const backend = new CareerApiClient(bearerToken);
+//
+// ⚠️ The token is read PER CALL. An MCP session outlives the 15-minute access
+// token, and the client sends the refreshed one on the same session id; a
+// client built once at session start kept calling career-api with the token
+// the session opened with, so every tool call after minute 15 failed with
+// token_expired for the rest of the chat.
+export function createConnectorHandlers(bearerToken: string | (() => string)) {
+  const currentToken = typeof bearerToken === "function" ? bearerToken : () => bearerToken;
 
   return async (name: string, args: Record<string, unknown>): Promise<CallToolResult> => {
+    const token = currentToken();
+    const backend = new CareerApiClient(token);
     try {
       switch (name) {
         case "laddro.resume.schema": {
@@ -124,6 +133,15 @@ export function createConnectorHandlers(bearerToken: string) {
           return { content: [{ type: "text", text: `Unknown connector tool: ${name}` }], isError: true };
       }
     } catch (error: unknown) {
+      if (error instanceof CareerApiError && error.status === 401 && isTokenErrorCode(errorCode(error))) {
+        // The next request carrying this token gets an HTTP 401 from server.ts,
+        // which is what makes the client refresh it. See rejectedTokens.ts.
+        markTokenRejected(token);
+        return {
+          content: [{ type: "text", text: "The Laddro sign-in for this chat has expired and is being renewed. Retry the same tool call once." }],
+          isError: true,
+        };
+      }
       return toToolError(error);
     }
   };
