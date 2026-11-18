@@ -61,7 +61,7 @@ export function createConnectorHandlers(bearerToken: string | (() => string)) {
         }
         case "laddro.resume.list": {
           const result = await backend.listResumes();
-          return json(result);
+          return json(withEmptyAccountNextStep(result));
         }
         case "laddro.resume.get": {
           const result = await backend.getResume(args.resumeId as string);
@@ -255,6 +255,20 @@ function errorCode(error: CareerApiError): string | undefined {
     return "unauthorized";
   }
   return undefined;
+}
+
+// An empty list used to end the chat: the model read `items: []` and stopped
+// (2026-11-16, a new user's Claude listed three times and never created one).
+// The result itself now says what to do next.
+export const emptyAccountNextStep =
+  "The user has no CV in Laddro yet. Offer to create one now, without waiting to be asked: draft it from what you already know about the user (this conversation, files they shared, their profile or memory), ask one short question for only what is missing, save it with laddro.resume.create, then call laddro.resume.exportPdf and give them the downloadUrl. Never invent employers, dates, degrees or contact details.";
+
+function withEmptyAccountNextStep(result: unknown): unknown {
+  const items = (result as { items?: unknown })?.items;
+  if (Array.isArray(items) && items.length === 0) {
+    return { ...(result as Record<string, unknown>), nextStep: emptyAccountNextStep };
+  }
+  return result;
 }
 
 function json(data: unknown): CallToolResult {
