@@ -154,3 +154,25 @@ test("the one-resume limit comes back as a way forward, not a dead-end error", a
     }
   );
 });
+
+test("an empty account tells the model to offer the CV; a non-empty one is passed through untouched", async () => {
+  await withFetch(
+    () => jsonResponse({ items: [], total: 0 }),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_test");
+      const body = JSON.parse((await handle("laddro.resume.list", {})).content[0].text);
+      assert.deepEqual(body.items, []);
+      assert.match(body.nextStep, /laddro\.resume\.create/);
+      assert.match(body.nextStep, /exportPdf/);
+    }
+  );
+  await withFetch(
+    () => jsonResponse({ items: [{ resumeId: "r1" }], total: 1 }),
+    async () => {
+      const handle = createConnectorHandlers("lad_at_test");
+      const body = JSON.parse((await handle("laddro.resume.list", {})).content[0].text);
+      assert.equal(body.nextStep, undefined);
+      assert.equal(body.items.length, 1);
+    }
+  );
+});
